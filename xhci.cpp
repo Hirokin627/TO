@@ -1,0 +1,350 @@
+#include "xhci.h"
+template <class T>
+void clearz(T* t){
+  //for(int i=0;i<16;i++)*(unsigned char*)((unsigned long long)t+i)=0;
+}
+void CR::push(struct TRB* t){
+  t->c=this->c;
+  ring[wp]=*t;
+  cns->puts("wp=%d\n",wp);
+  wp++;
+  if(wp==29){
+    struct linkTRB lt{};
+    lt.pointer=(unsigned long long)ring;
+    lt.tc=1;
+    lt.c=this->c;
+    ring[29]=*(struct TRB*)&lt;
+    this->c^=1;
+    wp=0;
+  }
+}
+void hid::init(unsigned char s){
+  slot=s;
+  initphase=0;
+}
+void hid::comp(struct transfertrb* t){
+  if(initphase==0){
+    
+  }
+}
+namespace xhci{
+  struct pcid xhc;
+  bool xhcp=false;
+  struct capreg* creg;
+  struct opr* ope;
+  struct slot* slots;
+  struct port* ports;
+  bool msip;
+  struct devc** dcbaa;
+  unsigned char maxports;
+  CR* cr;
+  CR* tr[8][32];
+  unsigned int eri=0;
+  unsigned int *db;
+  char c=1;
+  struct ERST* erst;
+  struct RR* rr;
+  char addrport=0;
+  void resetport(unsigned char port){
+    if(addrport>0){
+      ports[port].phase=waitfree;
+    }else if((ope->portset[port].portsc&1)&&(ope->portset[port].portsc&0x20000)){
+      unsigned int sc=ope->portset[port].portsc;
+      sc&= 0x0e00c3e0u;
+      sc|=1<<4;
+      sc|=1<<17;
+      sc|=0x200000;
+      ope->portset[port].portsc=sc;
+      while(ope->portset[port].portsc&0x10);
+      ports[port].phase=resetting;
+      cns->puts("resetting\n");
+      addrport=port;
+    }
+  }
+  void enableslot(){
+    enableslotTRB* et=new enableslotTRB;
+    cr->push((struct TRB*)et);
+    db[0]=0;
+    ports[addrport].phase=enablingslot;
+  }
+  void recievetrb(struct psctrb* trb){
+  int port=trb->port;
+  cns->puts("port=%d\n", port);
+  if(ope->portset[port].portsc&1){
+    if(ports[port].phase==waitreset){
+      if(!(ope->portset[port].portsc&0x200000))resetport(port);
+    }else if(ports[port].phase==resetting){
+      unsigned int p=ope->portset[port].portsc;
+      p&=0xe00c3e0;
+      p|=1<<21;
+      ope->portset[port].portsc=p;
+      enableslot();
+    }
+  }else{
+    struct confeptrb cet{};
+    cet.dc=1;
+    cet.slot=ports[port].slot;
+    cr->push((struct TRB*)&cet);
+    db[0]=0;
+    cns->puts("db=%016x\n", db);
+  }
+  }
+  unsigned int maxpacket(int psiv){
+    switch(psiv){
+      case 3: return 64;
+      case 4: return 512;
+      default: return 8;
+    }
+  }
+  void controltrans(unsigned char slot,unsigned char bmrequesttype, unsigned char brequest, unsigned short wvalue, unsigned short windex, unsigned short wlength, unsigned long long pointer, unsigned char dir){
+  //////cns->puts("slot=%d\n", slot);
+  struct setupTRB st{};
+  st.bmrequesttype=bmrequesttype;
+  st.brequest=brequest;
+  st.wvalue=wvalue;
+  st.windex=windex;
+  st.wlength=wlength;
+  st.trbtransferlength=8;
+  if(wlength){
+    if(dir)st.trt=3;
+    else st.trt=2;
+  }else{
+    st.trt=0;
+  }
+  tr[slot][0]->push((struct TRB*)&st);
+  if(wlength>0){
+    struct dataTRB dt{};
+    dt.pointer=pointer;
+    dt.trbtransferlength=wlength;
+    dt.tdsize=0;
+    dt.dir=dir;
+    dt.target=0;
+    dt.ioc=1;
+    tr[slot][0]->push((struct TRB*)&dt);
+  }
+  struct statusTRB stt{};
+  stt.dir=dir^1;
+  stt.target=0;
+  if(wlength<=0)stt.ioc=1;
+  tr[slot][0]->push((struct TRB*)&stt);
+  db[slot]=1;
+}
+  classd* drivers[256];
+  void recievetrb(struct cctrb* trb){
+    cns->puts("addrport=%d\n", addrport);
+    unsigned char slot=trb->slot;
+    struct TRB* t=(struct TRB*)trb->ctrb;
+    cns->puts("slot=%d code=%d type=%d\n", slot, trb->code, t->type);
+    if(t->type==9){
+      cns->puts("addrport=%d portsc=%08x\n", addrport, ope->portset[addrport].portsc);
+      slots[slot].port=addrport;
+      ports[addrport].slot=slot;
+      dcbaa[slot]=new struct devc;
+      struct inputc* ic=new struct inputc;
+      ic->icc.aflags=3;
+      //ic->scc.routestring=0;
+      ic->scc.roothubportnumber=addrport;
+      ic->scc.contextentries=1;
+      ic->scc.speed=(ope->portset[addrport].portsc>>10)&0xf;
+      struct epc* epcont=&ic->epcont[0];
+      tr[slot][0]=new CR;
+      epcont->eptype=4;
+      epcont->trdp=(unsigned long long)tr[slot][0]->ring|1;
+      epcont->maxpacketsize=maxpacket(ic->scc.speed);
+      epcont->cerr=3;
+      struct addrTRB* at=new addrTRB;
+      at->input=(unsigned long long)ic;
+      at->slot=slot;
+      at->bsr=0;
+      cr->push((struct TRB*)at);
+      db[0]=0;
+      cns->puts("db=%016x\n", db);
+      slots[slot].phase=addressingdevice;
+    }else if(t->type==11){
+      addrport=0;
+      for(int i=1;i<=maxports;i++){
+        if(ports[i].phase==waitfree)resetport(i);
+      }
+      slots[slot].phase=getcdesc;
+      //for(int i=0;i<100000000;i++);
+      /*struct setupTRB st{};
+      st.bmrequesttype=0b10000000;
+      st.brequest=6;
+      st.wvalue=0x100;
+      st.windex=0;
+      st.wlength=18;
+      st.trbtransferlength=8;
+      st.trt=3;
+      tr[slot][0]->push((struct TRB*)&st);
+      struct dataTRB dt{};
+      dt.pointer=searchmem(18);
+      dt.trbtransferlength=18;
+      dt.dir=1;
+      dt.ioc=1;
+      tr[slot][0]->push((struct TRB*)&dt);
+      struct statusTRB stt{};
+      stt.dir=0;
+      stt.ioc=0;
+      tr[slot][0]->push((struct TRB*)&stt);
+      db[slot]=1;
+      cns->puts("%016x\n", dcbaa[slot]->scc.contextentries);*/
+      controltrans(slot, 0b10000000, 6, 0x200, 0, 0x100, searchmem(0x100), 1);
+      //enableslot();
+    }
+  }
+  void recievetrb(struct transfertrb *trb){
+    int slot=trb->slot;
+    //if(slot==1)setcr3(0);
+    cns->puts("Trans slot=%d code=%d trbtransferlength=%x\n", slot, trb->code, trb->trbtransferlength);
+    struct TRB* t=(struct TRB*)trb->pointer;
+    if(slots[slot].phase==getcdesc){
+      if(trb->code==1||trb->code==13){
+        struct dataTRB* tb=(struct dataTRB*)t;
+        unsigned char* p=(unsigned char*)tb->pointer;
+        unsigned char* lp=(unsigned char*)((unsigned long long)p+(0x100-trb->trbtransferlength));
+        while(lp>p){
+          cns->puts("type=%d\n", p[1]);
+          if(p[1]==2){
+            struct configurationdescriptor* d=(struct configurationdescriptor*)p;
+            cns->puts("configurationvalue %d\n", d->bconfigurationvalue);
+            slots[slot].ds=*d;
+          }else if(p[1]==4){
+            struct interfacedescriptor* i=(struct interfacedescriptor*)p;
+            if(i->binterfaceclass==3){
+              drivers[slot]=new hid();
+            }
+          }
+          p+=p[0];
+        }
+      }
+    }
+  }
+  void posthandle(){
+  cli();
+  //*(unsigned int*)0xfee000b0=0;
+  struct TRB* erdp=(struct TRB*)(rr->ir[0].erdp&~0xf);
+  while(erdp->c==c){
+    struct TRB t=*erdp;
+    erdp++;
+    eri++;
+    cns->puts("eri=%d\n", eri);
+    if(eri>=30){
+      eri=0;
+      erdp=(struct TRB*)erst->erba;
+      c^=1;
+    }
+    rr->ir[0].erdp=(unsigned long long)erdp|(rr->ir[0].erdp&0xf);
+    switch(t.type){
+      case 34:
+        recievetrb((struct psctrb*)&t);
+        break;
+      case 33:
+        recievetrb((struct cctrb*)&t);
+        break;
+      case 32:
+        recievetrb((struct transfertrb*)&t);
+        break;
+      default:
+        cns->puts("Unknown type:%d\n", t.type);
+        break;
+    }
+    rr->ir[0].ip=1;
+    *(unsigned int*)0xfee000b0=0;
+    io_out8(0x20, 0x62);
+    io_out8(0xa0, 0x63);
+  }
+  }
+  __attribute__((interrupt)) void xhcihandle(int* esp){
+    asm("cli");
+    rr->ir[0].ip=1;
+    ope->usbsts|=8;
+    //kernelbuf->write(0);
+    posthandle();
+    *(unsigned int*)0xfee000b0=0;
+    io_out8(0x20, 0x62);
+    io_out8(0xa0, 0x63);
+  }
+  void init(){
+    for(int i=0;i<pci::many;i++){
+      if(pci::readpcidata(pci::pcis[i], 8)>>8==0x0c0330){
+        xhc=pci::pcis[i];
+        xhcp=true;
+        if((pci::readpcidata(xhc, 0)&0xffff)==0x8086){
+          break;
+        }
+      }
+    }
+    if(!xhcp)return;
+    cns->puts("XHCI found\n");
+    msip=false;
+    unsigned char p=pci::readpcidata(xhc, 0x34)&0xff;
+    while(p){
+      unsigned char t=pci::readpcidata(xhc, p)&0xff;
+      if(t==5){
+        msip=true;
+        break;
+      }
+      cns->puts("type=%d\n", t);
+      p=(pci::readpcidata(xhc, p)>>8)&0xff;
+    }
+    eri=0;
+    if(msip){
+      union pcimsi mr;
+      for(int i=0;i<4;i++)mr.data[i]=pci::readpcidata(xhc, p+i*4);
+      mr.reg.control|=1;
+      mr.reg.control&=~0x70;
+      mr.reg.control|=0;
+      cns->puts(" 64bit addr:%x\n", (mr.reg.control>>7)&0x1);
+      mr.reg.address=0xfee00000;
+      mr.reg.uaddr=0;
+      mr.reg.data=0xc02b;
+      for(int i=0;i<4;i++)pci::writepcidata(xhc, p+i*4, mr.data[i]);
+    }else{
+    }
+    cns->puts("using irq=%x\n", pci::readpcidata(xhc, 0x3c));
+    unsigned long long mmio=pci::readpcidata(xhc, 0x10)&~0xf;
+    mmio|=(unsigned long long)pci::readpcidata(xhc, 0x14)<<32;
+    creg=(struct capreg*)mmio;
+    db=(unsigned int*)(mmio+creg->dboff);
+    rr=(struct RR*)(mmio+creg->rtsoff);
+    ope=(struct opr*)(mmio+creg->caplength);
+    ope->usbcmd|=2;
+    while(ope->usbcmd&2);
+    while(ope->usbcmd&(1<<11));
+    for(int i=0;i<10000000;i++);
+    ope->dcbaap=searchmem(8*8+8);
+    dcbaa=(struct devc**)ope->dcbaap;
+    slots=(struct slot*)searchmem(sizeof(struct slot)*8);
+    ope->config=8;
+    maxports=creg->hcsparams1>>24;
+    cns->puts("MAx ports=%d\n", maxports);
+    if(maxports==0)return;
+    ports=(struct port*)searchmem(sizeof(struct port)*maxports);
+    cr=new CR;
+    ope->crcr=(unsigned long long)cr->ring|1;
+    erst=new struct ERST;
+    erst->erba=searchmem(16*30);
+    erst->ersz=30;
+    rr->ir[0].erstsz=1;
+    rr->ir[0].erdp=(unsigned long long)erst->erba|8;;
+    rr->ir[0].erstba=(unsigned long long)erst;
+    rr->ir[0].interval=4000; 
+    rr->ir[0].ip=rr->ir[0].ie=1;
+    ope->usbcmd|=4;
+    ope->usbcmd|=1;
+    while(ope->usbsts&1);
+    set_idt(0x2b, (unsigned long long)xhcihandle, 8, 0x8e);
+    open_irq(11);
+    sti();
+    for(int i=1;i<=maxports;i++){
+      ports[i].phase=waitreset;
+      if((ope->portset[i].portsc&1)&&(ope->portset[i].portsc&(1<<17))){
+        resetport(i);
+      }
+    }
+    io_out8(0x20, 0x62);
+    io_out8(0xa0, 0x63);
+    rr->ir[0].ip=1;
+    asm("int $0x2b");
+  }
+};

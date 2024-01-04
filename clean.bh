@@ -1,0 +1,10 @@
+#!/bin/sh -ex
+make clean
+: << 'COMMENT'
+echo "for DIR in $(ls apps/*/Makefile)"
+echo "do"
+echo "	ADIR=$(dirname $DIR)"
+echo "	ANAME=$(basename $ADIR)"
+echo "	rm -f $ADIR/$ANAME.app"
+done
+COMMENT

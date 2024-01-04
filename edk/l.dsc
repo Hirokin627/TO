@@ -1,0 +1,24 @@
+[Defines]
+	PLATFORM_NAME=LoadPkg
+	PLATFORM_GUID=d6a78c81-0d7f-4b46-af1d-e6ed44e5ffab
+	PLATFORM_VERSION=0.01
+	DSC_SPECIFICATION=0x10005
+	OUTPUT_DIRECTORY=Build/LoadPkg
+	SUPPORTED_ARCHITECTURES=IA32|X64
+	BUILD_TARGETS=DEBUG|RELEASE|NOOPT
+[LibraryClasses]
+	UefiApplicationEntryPoint|MdePkg/Library/UefiApplicationEntryPoint/UefiApplicationEntryPoint.inf
+  BaseLib|MdePkg/Library/BaseLib/BaseLib.inf
+	UefiLib|MdePkg/Library/UefiLib/UefiLib.inf
+	UefiBootServicesTableLib|MdePkg/Library/UefiBootServicesTableLib/UefiBootServicesTableLib.inf
+  UefiRuntimeServicesTableLib|MdePkg/Library/UefiRuntimeServicesTableLib/UefiRuntimeServicesTableLib.inf
+    DebugLib|MdePkg/Library/BaseDebugLibNull/BaseDebugLibNull.inf
+
+  PcdLib|MdePkg/Library/BasePcdLibNull/BasePcdLibNull.inf
+  BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
+  PrintLib|MdePkg/Library/BasePrintLib/BasePrintLib.inf
+  DevicePathLib|MdePkg/Library/UefiDevicePathLib/UefiDevicePathLib.inf
+  MemoryAllocationLib|MdePkg/Library/UefiMemoryAllocationLib/UefiMemoryAllocationLib.inf
+  RegisterFilterLib|MdePkg/Library/RegisterFilterLibNull/RegisterFilterLibNull.inf
+[Components]
+	LoadPkg/l.inf
