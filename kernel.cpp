@@ -22,9 +22,24 @@ extern "C" void nKernelmain(struct arg* ai){
   pic_init();
   for(int i=0;i<3;i++)cns->puts("test %d\n", i);
   cns->l->updown(-1);
+  layer* l=new layer(16, 16);
+  graphic::drawbox(l, 0xffffff, 0, 0, 15, 15);
+  l->updown(layerd::top+1);
   xhci::init();
   while(1){
+    if(kernelbuf->len==0){
       sti();
       asm("sti\nhlt");
+    }else{
+      cli();
+      asm("cli");
+      unsigned int q=kernelbuf->read();
+      if(q==0){
+        unsigned char c=kernelbuf->read();
+        signed int x=kernelbuf->read();
+        signed int y=kernelbuf->read();
+        l->slide(l->x+x, l->y+y);
+      }
+    }
   }
 }

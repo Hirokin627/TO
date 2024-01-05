@@ -141,6 +141,7 @@ class layer{
     void updown(int h);
     void refresh();
     void refreshconfro(int,int,int,int);
+    void slide(int,int);
     unsigned int* buf;
     int bxsize,bysize;
     int x,y;

@@ -191,8 +191,8 @@ namespace xhci{
   void recievetrb(struct transfertrb *trb){
     int slot=trb->slot;
     //if(slot==1)setcr3(0);
-    //cns->puts("Trans slot=%d code=%trbtransferlength=%x\n", slot, trb->code, trb->trbtransferlength);
     struct TRB* t=(struct TRB*)trb->pointer;
+    cns->puts("Trans slot=%d code=%d trbtransferlength=%x type=%d\n", slot, trb->code, trb->trbtransferlength, t->type);
     if(slots[slot].phase==getcdesc){
       if(trb->code==1||trb->code==13){
         struct dataTRB* tb=(struct dataTRB*)t;
@@ -254,11 +254,13 @@ namespace xhci{
         if(supported){
           cr->push((struct TRB*)&ct);
           db[0]=0;
+        }else{
+          cns->puts("Not suported\n");
         }
         slots[slot].phase=setconf;
       }
     }else if(slots[slot].phase==setconf){
-      cns->puts("starting\n");
+      cns->puts("starting ");
       slots[slot].phase=starting;;
       drivers[slot]->init(slot);
     }else{
@@ -405,6 +407,7 @@ void hid::init(unsigned char s){
   nt->pointer=(unsigned long long)buf;
   nt->trbtransferlength=8;
   nt->ioc=1;
+  cns->puts("HID\n");
   if(!isr)controltrans(slot, 0b00100001, 11, isr, slots[slot].intn, 0, 0, 0);
   else controltrans(slot, 0b10000001, 6, 0x2200, slots[slot].intn, 0x100, searchmem(0x100), 1);
 }       
@@ -521,14 +524,31 @@ void decoderd(hid* d, unsigned char* p, unsigned long long size){
 void hid::comp(struct transfertrb* t){
   using namespace xhci;
   if(!isr){
+      if(slots[slot].type==USBMouse){
+        kernelbuf->write(0);
+        kernelbuf->write(buf[0]);
+        kernelbuf->write((signed char)buf[1]);
+        kernelbuf->write((signed char)buf[2]);
+      }
       tr[slot][slots[slot].intin]->push((struct TRB*)nt);
       db[slot]=slots[slot].intin;
+      initphase=1;
   }else{
     if(initphase==0){
       decoderd(this, (unsigned char*)*(unsigned long long*)*(unsigned long long*)t, 0x100-t->trbtransferlength);
       initphase=1;
       controltrans(slot, 0b00100001, 11, 1, slots[slot].intn, 0, 0, 0);
     }else{
+      int nmx=getdfornt(&buf[xoff], xsize)*scrxsize/xmax;
+      int nmy=getdfornt(&buf[yoff], ysize)*scrysize/ymax;
+      int px=nmx-mx;
+      int py=nmy-my;
+      mx=nmx;
+      my=nmy;  
+      kernelbuf->write(0);
+      kernelbuf->write(getdfornt(&buf[boff], bsize));
+      kernelbuf->write((signed int)px);
+      kernelbuf->write((signed int)py);
       tr[slot][slots[slot].intin]->push((struct TRB*)nt);
       db[slot]=slots[slot].intin;
     }

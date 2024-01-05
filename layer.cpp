@@ -68,6 +68,7 @@ void layer::updown(int nheight){
       top--;
     }
   }
+  height=nheight;
   refresh();
 }
 void layer::refresh(){
@@ -75,4 +76,12 @@ void layer::refresh(){
 }
 void layer::refreshconfro(int x0, int y0, int x1, int y1){
   refreshsub(x+x0, y+y0, x+x1, y+y1);
+}
+void layer::slide(int nx, int ny){
+  int oldx=x;
+  int oldy=y;
+  x=nx;
+  y=ny;
+  refreshsub(oldx, oldy, oldx+bxsize, oldy+bysize);
+  refresh();
 }
