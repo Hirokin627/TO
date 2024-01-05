@@ -394,7 +394,9 @@ enum portp{
 enum devicetype{ 
   USBMouse,
   USBKeyboard,
-  USBRM
+  USBRdevice,
+  USBRMouse,
+  USBRKeyboard
 };
 struct port{
   enum portp phase;
@@ -410,6 +412,7 @@ struct slot{
   unsigned char nt;
   enum devicetype type;
     struct configurationdescriptor ds;
+    struct interfacedescriptor id;
 };
 class classd{
   public:
@@ -425,4 +428,11 @@ class hid : public classd{
     void init(unsigned char s) override;
     void comp(struct transfertrb* t) override;
     int initphase;
+    bool isr;
+    unsigned char* buf;
+    struct normalTRB* nt;
+    unsigned int xoff,yoff,boff;
+    unsigned int xsize,ysize,bsize;
+    unsigned int xmax,xmin,ymax,ymin;
+    int mx,my;
 };

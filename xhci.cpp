@@ -6,7 +6,6 @@ void clearz(T* t){
 void CR::push(struct TRB* t){
   t->c=this->c;
   ring[wp]=*t;
-  cns->puts("wp=%d\n",wp);
   wp++;
   if(wp==29){
     struct linkTRB lt{};
@@ -16,15 +15,6 @@ void CR::push(struct TRB* t){
     ring[29]=*(struct TRB*)&lt;
     this->c^=1;
     wp=0;
-  }
-}
-void hid::init(unsigned char s){
-  slot=s;
-  initphase=0;
-}
-void hid::comp(struct transfertrb* t){
-  if(initphase==0){
-    
   }
 }
 namespace xhci{
@@ -66,6 +56,7 @@ namespace xhci{
     cr->push((struct TRB*)et);
     db[0]=0;
     ports[addrport].phase=enablingslot;
+    delete et;
   }
   void recievetrb(struct psctrb* trb){
   int port=trb->port;
@@ -81,12 +72,12 @@ namespace xhci{
       enableslot();
     }
   }else{
+    ports[port].phase=waitreset;
     struct confeptrb cet{};
     cet.dc=1;
     cet.slot=ports[port].slot;
     cr->push((struct TRB*)&cet);
     db[0]=0;
-    cns->puts("db=%016x\n", db);
   }
   }
   unsigned int maxpacket(int psiv){
@@ -160,6 +151,7 @@ namespace xhci{
       db[0]=0;
       cns->puts("db=%016x\n", db);
       slots[slot].phase=addressingdevice;
+      delete at;
     }else if(t->type==11){
       addrport=0;
       for(int i=1;i<=maxports;i++){
@@ -190,33 +182,87 @@ namespace xhci{
       cns->puts("%016x\n", dcbaa[slot]->scc.contextentries);*/
       controltrans(slot, 0b10000000, 6, 0x200, 0, 0x100, searchmem(0x100), 1);
       //enableslot();
+    }else if(t->type==12){
+      controltrans(slot, 0, 9, slots[slot].ds.bconfigurationvalue, 0, 0, 0, 0);
+    }else{
+      cns->puts("OTher %d\n", t->type);
     }
   }
   void recievetrb(struct transfertrb *trb){
     int slot=trb->slot;
     //if(slot==1)setcr3(0);
-    cns->puts("Trans slot=%d code=%d trbtransferlength=%x\n", slot, trb->code, trb->trbtransferlength);
+    //cns->puts("Trans slot=%d code=%trbtransferlength=%x\n", slot, trb->code, trb->trbtransferlength);
     struct TRB* t=(struct TRB*)trb->pointer;
     if(slots[slot].phase==getcdesc){
       if(trb->code==1||trb->code==13){
         struct dataTRB* tb=(struct dataTRB*)t;
         unsigned char* p=(unsigned char*)tb->pointer;
         unsigned char* lp=(unsigned char*)((unsigned long long)p+(0x100-trb->trbtransferlength));
+        bool once=false;
+        struct inputc* icc=new struct inputc;
+        icc->scc=dcbaa[slot]->scc;
+        bool supported=false;
         while(lp>p){
           cns->puts("type=%d\n", p[1]);
           if(p[1]==2){
             struct configurationdescriptor* d=(struct configurationdescriptor*)p;
             cns->puts("configurationvalue %d\n", d->bconfigurationvalue);
             slots[slot].ds=*d;
-          }else if(p[1]==4){
+          }else if(p[1]==4&&drivers[slot]==0){
             struct interfacedescriptor* i=(struct interfacedescriptor*)p;
+            slots[slot].id=*i;
             if(i->binterfaceclass==3){
               drivers[slot]=new hid();
+              supported=true;
+              if(i->binterfacesubclass==1){
+                cns->puts("using boot protocol\n");
+                if(i->binterfaceprotocol==2){
+                  cns->puts("This is Mouse!\n");
+                  slots[slot].type=USBMouse;
+                }else{
+                  cns->puts("This is Keyboard!\n");
+                  slots[slot].type=USBKeyboard;
+                }
+              }else{
+                cns->puts("using report protocol\n");
+                slots[slot].type=USBRdevice;
+              }
+            }else{
+              drivers[slot]=new classd;
             }
+          }else if(p[1]==5){
+            struct endpointdescriptor* e=(struct endpointdescriptor*)p;
+            unsigned char dci=e->bendpointaddress*2;
+            dci+=(e->bendpointaddress>>7)&1;
+            icc->icc.aflags|=1<<dci;
+            struct epc* epcont=&icc->epcont[dci-1];
+            epcont->eptype=e->bmattributes&3;
+            epcont->eptype+=((e->bendpointaddress>>7)&1)*4;
+            tr[slot][dci]=new CR;
+            epcont->trdp=(unsigned long long)tr[slot][dci]->ring|1;
+            epcont->cerr=3;
+            epcont->interval=e->binterval;
+            if((dci&1)&&(slots[slot].intin==0))slots[slot].intin=dci;
+            cns->puts("dci=%d eptype=%d\n", dci, epcont->eptype);
           }
           p+=p[0];
         }
+        struct confeptrb ct{};
+        ct.slot=slot;
+        ct.dc=0;
+        ct.pointer=(unsigned long long)icc;
+        if(supported){
+          cr->push((struct TRB*)&ct);
+          db[0]=0;
+        }
+        slots[slot].phase=setconf;
       }
+    }else if(slots[slot].phase==setconf){
+      cns->puts("starting\n");
+      slots[slot].phase=starting;;
+      drivers[slot]->init(slot);
+    }else{
+      drivers[slot]->comp(trb);
     }
   }
   void posthandle(){
@@ -227,8 +273,8 @@ namespace xhci{
     struct TRB t=*erdp;
     erdp++;
     eri++;
-    cns->puts("eri=%d\n", eri);
-    if(eri>=30){
+    //cns->puts("eri=%d\n", eri);
+   if(eri>=30){
       eri=0;
       erdp=(struct TRB*)erst->erba;
       c^=1;
@@ -256,13 +302,14 @@ namespace xhci{
   }
   __attribute__((interrupt)) void xhcihandle(int* esp){
     asm("cli");
+    cli();
     rr->ir[0].ip=1;
-    ope->usbsts|=8;
-    //kernelbuf->write(0);
+    ope->usbsts|=8; 
     posthandle();
     *(unsigned int*)0xfee000b0=0;
     io_out8(0x20, 0x62);
     io_out8(0xa0, 0x63);
+    sti();
   }
   void init(){
     for(int i=0;i<pci::many;i++){
@@ -348,3 +395,145 @@ namespace xhci{
     asm("int $0x2b");
   }
 };
+void hid::init(unsigned char s){
+  using namespace xhci;
+  slot=s;
+  initphase=0;
+  isr=slots[slot].id.binterfacesubclass^1;
+  buf=(unsigned char*)searchmem(8);
+  nt=new normalTRB;
+  nt->pointer=(unsigned long long)buf;
+  nt->trbtransferlength=8;
+  nt->ioc=1;
+  if(!isr)controltrans(slot, 0b00100001, 11, isr, slots[slot].intn, 0, 0, 0);
+  else controltrans(slot, 0b10000001, 6, 0x2200, slots[slot].intn, 0x100, searchmem(0x100), 1);
+}       
+unsigned char gete(unsigned char* a){
+  return *a&0xfc;
+}
+unsigned long long getd(unsigned char* a){
+  unsigned long long bytsize=a[0]&3;
+  unsigned long long v=0;
+  for(int i=0;i<bytsize;i++){
+    unsigned char d=a[1+i];
+    v|=d<<(i*8);
+  }
+  return v;
+}
+unsigned int getdfornt(unsigned char* p, unsigned char bsize){
+  unsigned int v=0;
+  for(int i=0;i<bsize;i++){
+    v|=p[i]<<(i*8);
+  }
+  return v;
+}
+void plus(unsigned int* bo, unsigned int* bp, unsigned int v){
+  *bp+=v;
+  if(*bp>=8){
+    *bo+=*bp/8;
+    *bp%=8;
+  }
+}
+void decoderd(hid* d, unsigned char* p, unsigned long long size){
+  using namespace xhci;
+  unsigned char slot=d->slot;
+  unsigned char* lp=(unsigned char*)((unsigned long long)p+size);
+  int cc=0;
+  unsigned int bo=0,bp=0;
+  unsigned int rs=0;
+  while(lp>p){
+    if(cc>0){
+      if(gete(p)==0xc0){
+        cc--;
+      }else if(gete(p)==4){
+        unsigned char pg=getd(p);
+        p+=p[0]&3;
+        p++;
+        cns->puts("Usage Page:%02x\n", pg);
+        unsigned int lmin=0,lmax=0;
+        fifo* u=new fifo(128);
+        unsigned int cnt=0;
+        while(gete(p)!=0x80){
+          if(gete(p)==0x14){
+            lmin=getd(p);
+          }else if(gete(p)==0x24){
+            lmax=getd(p);
+          }else if(gete(p)==8){
+            u->write(getd(p));
+          }else if(gete(p)==0x74){
+            rs=getd(p);
+          }else if(gete(p)==0x94){
+            cnt=getd(p);
+          }
+          p+=p[0]&3;
+          p++;
+        }
+        int mu=u->len;
+        if(pg==9&&!mu){
+          d->boff=bo;
+          d->bsize=rs;
+          plus(&bo, &bp, rs*cnt);
+        }
+        while(mu){
+          unsigned char ui=u->read();
+          mu--;
+          if(ui==0x30){
+            d->xoff=bo;
+            d->xsize=rs/8;
+            d->xmax=lmax;
+            d->xmin=lmin;
+          }else if(ui==0x31){
+            d->yoff=bo;
+            d->ysize=rs/8;
+            d->ymax=lmax;
+            d->xmin=lmin;
+          }
+          plus(&bo, &bp, rs);
+        }
+      }else if(gete(p)==0x94||gete(p)==0x74){
+        int cnt=0;
+        int btsize=rs;
+        while(gete(p)!=0x80){
+          if(gete(p)==0x94){
+            cnt=getd(p);
+            cns->puts("pading cnt=%d\n", cnt);
+          }else if(gete(p)==0x74){
+            btsize=getd(p);
+            cns->puts("pading bsize=%d\n", btsize);
+          }
+          p+=p[0]&3;
+          p++;
+        }
+        plus(&bo, &bp, cnt*btsize);
+      }
+    }else{
+      if(gete(p)==8){
+        uint8_t t=getd(p);
+        if(t==2){
+          slots[slot].type=USBRMouse;
+        }
+      }else if(gete(p)==0xa0){
+        //cns->puts("Collec start\n");
+        cc++;
+      }
+    }
+    p+=p[0]&3;
+    p++;
+  }
+}
+void hid::comp(struct transfertrb* t){
+  using namespace xhci;
+  if(!isr){
+      tr[slot][slots[slot].intin]->push((struct TRB*)nt);
+      db[slot]=slots[slot].intin;
+  }else{
+    if(initphase==0){
+      decoderd(this, (unsigned char*)*(unsigned long long*)*(unsigned long long*)t, 0x100-t->trbtransferlength);
+      initphase=1;
+      controltrans(slot, 0b00100001, 11, 1, slots[slot].intn, 0, 0, 0);
+    }else{
+      tr[slot][slots[slot].intin]->push((struct TRB*)nt);
+      db[slot]=slots[slot].intin;
+    }
+  }
+}

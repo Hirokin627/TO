@@ -23,16 +23,7 @@ extern "C" void nKernelmain(struct arg* ai){
   for(int i=0;i<3;i++)cns->puts("test %d\n", i);
   xhci::init();
   while(1){
-    if(kernelbuf->len==0){
       sti();
       asm("sti\nhlt");
-    }else{
-      cli();
-      int q=kernelbuf->read();
-      if(q==0){
-        asm("cli");
-        xhci::posthandle();
-      }
-    }
   }
 }
