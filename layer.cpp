@@ -58,6 +58,15 @@ void layer::updown(int nheight){
       top++;
     }
     layers[nheight]=this;
+  }else if(old>nheight){
+    if(nheight>=0){
+    }else{
+      for(int i=old;i<top;i++){
+        layers[i]=layers[i+1];
+        layers[i]->height=i;
+      }
+      top--;
+    }
   }
   refresh();
 }

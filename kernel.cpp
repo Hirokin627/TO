@@ -21,6 +21,7 @@ extern "C" void nKernelmain(struct arg* ai){
   pci::init();
   pic_init();
   for(int i=0;i<3;i++)cns->puts("test %d\n", i);
+  cns->l->updown(-1);
   xhci::init();
   while(1){
       sti();

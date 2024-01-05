@@ -449,7 +449,6 @@ void decoderd(hid* d, unsigned char* p, unsigned long long size){
         unsigned char pg=getd(p);
         p+=p[0]&3;
         p++;
-        cns->puts("Usage Page:%02x\n", pg);
         unsigned int lmin=0,lmax=0;
         fifo* u=new fifo(128);
         unsigned int cnt=0;
@@ -496,10 +495,8 @@ void decoderd(hid* d, unsigned char* p, unsigned long long size){
         while(gete(p)!=0x80){
           if(gete(p)==0x94){
             cnt=getd(p);
-            cns->puts("pading cnt=%d\n", cnt);
           }else if(gete(p)==0x74){
             btsize=getd(p);
-            cns->puts("pading bsize=%d\n", btsize);
           }
           p+=p[0]&3;
           p++;
