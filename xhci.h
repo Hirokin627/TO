@@ -412,6 +412,7 @@ struct slot{
   unsigned char nt;
   enum devicetype type;
     struct configurationdescriptor ds;
+    unsigned char* fulld;
     struct interfacedescriptor id;
 };
 class classd{

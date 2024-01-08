@@ -35,6 +35,7 @@ namespace xhci{
   struct ERST* erst;
   struct RR* rr;
   char addrport=0;
+  classd* drivers[256];
   void clearbitportsc(unsigned char port, unsigned char b){
     unsigned int sc=ope->portset[port].portsc;
     sc&=~(1<<b);
@@ -126,13 +127,13 @@ namespace xhci{
   tr[slot][0]->push((struct TRB*)&stt);
   db[slot]=1;
 }
-  classd* drivers[256];
   void recievetrb(struct cctrb* trb){
     cns->puts("addrport=%d\n", addrport);
     unsigned char slot=trb->slot;
     struct TRB* t=(struct TRB*)trb->ctrb;
     cns->puts("slot=%d code=%d type=%d\n", slot, trb->code, t->type);
     if(t->type==9){
+      drivers[slot]=0;
       cns->puts("addrport=%d portsc=%08x\n", addrport, ope->portset[addrport].portsc);
       slots[slot].port=addrport;
       ports[addrport].slot=slot;
@@ -209,6 +210,7 @@ namespace xhci{
         struct inputc* icc=new struct inputc;
         icc->scc=dcbaa[slot]->scc;
         bool supported=false;
+        slots[slot].fulld=p;
         while(lp>p){
           cns->puts("type=%d\n", p[1]);
           if(p[1]==2){
