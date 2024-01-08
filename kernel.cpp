@@ -7,6 +7,7 @@ fifo* kernelbuf;
 extern "C" caddr_t sbrk(size_t size){
   return (caddr_t)searchmem(size);
 }
+int mx,my;
 extern "C" void nKernelmain(struct arg* ai){
   cli();
   asm("cli");
@@ -21,7 +22,7 @@ extern "C" void nKernelmain(struct arg* ai){
   pci::init();
   pic_init();
   for(int i=0;i<3;i++)cns->puts("test %d\n", i);
-  cns->l->updown(-1);
+  //cns->l->updown(-1);
   layer* l=new layer(16, 16);
   graphic::drawbox(l, 0xffffff, 0, 0, 15, 15);
   l->updown(layerd::top+1);
@@ -38,7 +39,15 @@ extern "C" void nKernelmain(struct arg* ai){
         unsigned char c=kernelbuf->read();
         signed int x=kernelbuf->read();
         signed int y=kernelbuf->read();
-        l->slide(l->x+x, l->y+y);
+        mx=l->x+x;
+        my=l->y+y;
+        if(mx<0)mx=0;
+        if(my<0)my=0;
+        if(mx>scrxsize-1)mx=scrxsize-1;
+        if(my>scrysize-1)my=scrysize-1;
+        l->slide(mx, my);
+      }else if(q==1){
+        xhci::posthandle();
       }
     }
   }

@@ -27,6 +27,7 @@ class console;
 extern console* cns;
 class fifo;
 extern fifo* kernelbuf;
+extern int mx,my;
 typedef unsigned long addr_t;
 typedef void event(unsigned long long obj);
 struct pcid{
@@ -209,4 +210,6 @@ extern "C"{
   void loadidt(short, struct IDT*);
   unsigned int io_in32(short);
   void io_out32(short, unsigned int);
+  unsigned int rflags();
+  void srflags(unsigned int);
 };

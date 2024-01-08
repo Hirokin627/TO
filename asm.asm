@@ -184,3 +184,13 @@ io_in16:
 	mov dx,di
 	in ax,dx
 	ret
+global rflags
+rflags:
+	pushfq
+	pop rax
+	ret
+global srflags
+srflags:
+	push rdi
+	popfq
+	ret

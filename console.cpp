@@ -34,6 +34,8 @@ void console::nline(){
   }
 }
 void console::puts(const char* format,...){
+  unsigned int r=rflags();
+  asm("cli");
   va_list ap;
   char s[1024];
   
@@ -42,4 +44,5 @@ void console::puts(const char* format,...){
   va_end(ap);
   
   putsns((const char*)s);
+  srflags(r);
 }
