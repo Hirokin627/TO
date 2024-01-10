@@ -202,10 +202,14 @@ namespace xhci{
   void posthandle();
   void init();
 };
+namespace ps2{
+  void init();
+};
 extern "C"{
   void setcr3(unsigned long long*);
   unsigned long long* getcr3();
   void io_out8(unsigned short, unsigned char);
+  unsigned char io_in8(unsigned short);
   void loadgdt(short, unsigned long long*);
   void loadidt(short, struct IDT*);
   unsigned int io_in32(short);

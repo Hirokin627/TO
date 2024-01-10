@@ -21,24 +21,61 @@ extern "C" void nKernelmain(struct arg* ai){
   x64_init();
   pci::init();
   pic_init();
+  asm("sti");
+  ps2::init();
   for(int i=0;i<3;i++)cns->puts("test %d\n", i);
-  //cns->l->updown(-1);
+  cns->l->updown(-1);
   layer* l=new layer(16, 16);
-  graphic::drawbox(l, 0xffffff, 0, 0, 15, 15);
+  l->col_inv=-1;
+  static char cursor[16][17]={
+		"**************..",
+		"*OOOOOOOOOOO*...",
+		"*OOOOOOOOOO*....",
+		"*OOOOOOOOO*.....",
+		"*OOOOOOOO*......",
+		"*OOOOOOO*.......",
+		"*OOOOOOO*.......",
+		"*OOOOOOOO*......",
+		"*OOOO**OOO*.....",
+		"*OOO*..*OOO*....",
+		"*OO*....*OOO*...",
+		"*O*......*OOO*..",
+		"**........*OOO*.",
+		"*..........*OOO*",
+		"............*OO*",
+		".............***"
+  };
+  for(int y=0;y<16;y++){
+    for(int x=0;x<16;x++){
+      unsigned int c=0;
+      switch(cursor[y][x]){
+        case '*':
+          c=0;
+          break;
+        case 'O':
+          c=0xffffff;
+          break;
+        default:
+          c=-1;
+          break;
+      }
+      l->buf[y*16+x]=c;
+    }
+  }
+  //graphic::drawbox(l, 0xffffff, 0, 0, 15, 15);
   l->updown(layerd::top+1);
   xhci::init();
   while(1){
     if(kernelbuf->len==0){
-      sti();
       asm("sti\nhlt");
     }else{
-      cli();
       asm("cli");
       unsigned int q=kernelbuf->read();
       if(q==0){
         unsigned char c=kernelbuf->read();
         signed int x=kernelbuf->read();
         signed int y=kernelbuf->read();
+        asm("sti");
         mx=l->x+x;
         my=l->y+y;
         if(mx<0)mx=0;
