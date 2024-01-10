@@ -148,6 +148,10 @@ class layer{
     int x,y;
     unsigned int col_inv;
     int height;
+    int manye;
+    void registss(layer* s);
+    layer* slaves[256];
+    layer* master;
 };
 class console{
   public:
@@ -159,7 +163,6 @@ class console{
     int lines,rows;
     layer* l;
     int cx,cy;
-    
 };
 class fifo{
   public:
@@ -169,6 +172,13 @@ class fifo{
     unsigned long long* datas;
     int rp,wp;
     int len,size;
+};
+class window{
+  public:
+    window(int,int);
+    layer* cs;
+    layer* edge;
+    layer* tb;
 };
 void memory_init(EFI_MEM* mems, unsigned long long dsize, unsigned long long bsize);
 void x64_init();

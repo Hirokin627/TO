@@ -23,7 +23,7 @@ namespace layerd{
     graphic::drawbox(bl, 0x848484, scrxsize-47, scrysize-24, scrxsize-4, scrysize-24);
     graphic::drawbox(bl, 0x848484, scrxsize-47,scrysize-23, scrxsize-47, scrysize-4);
     graphic::drawbox(bl, 0xffffff, scrxsize-47, scrysize-3, scrxsize-4, scrysize-3);
-    graphic::drawbox(bl, 0xffffff, scrxsize-3, scrysize-3, scrxsize-3, scrysize-3);
+    graphic::drawbox(bl, 0xffffff, scrxsize-3, scrysize-24, scrxsize-3, scrysize-3);
     bl->updown(0);
   }
   void refreshsub(int x0, int y0, int x1, int y1){
@@ -67,6 +67,13 @@ void layer::updown(int nheight){
   if(nheight<-1)nheight=-1;
   if(nheight>top+1)nheight=top+1;
   int old=height;
+  if(master){
+    height+=master->height;
+    if(old<master->height){
+    }else{
+      height+=1;
+    }
+  }
   if(old<nheight){
     if(old>=0){
     }else{
@@ -88,7 +95,15 @@ void layer::updown(int nheight){
     }
   }
   height=nheight;
+  for(int i=0;i<manye;i++){
+    slaves[i]->updown(i);
+  }
   refresh();
+}
+void layer::registss(layer* s){
+  slaves[manye]=s;
+  manye++;
+  s->master=this;
 }
 void layer::refresh(){
   refreshsub(x, y, x+bxsize, y+bysize);
@@ -97,10 +112,17 @@ void layer::refreshconfro(int x0, int y0, int x1, int y1){
   refreshsub(x+x0, y+y0, x+x1, y+y1);
 }
 void layer::slide(int nx, int ny){
+  if(master){
+    nx+=master->x;
+    ny+=master->y;
+  }
   int oldx=x;
   int oldy=y;
   x=nx;
   y=ny;
+  for(int i=0;i<manye;i++){
+    slaves[i]->slide(slaves[i]->x-oldx, slaves[i]->y-oldy);
+  }
   refreshsub(oldx, oldy, oldx+bxsize, oldy+bysize);
   refresh();
 }

@@ -64,6 +64,7 @@ extern "C" void nKernelmain(struct arg* ai){
   }
   //graphic::drawbox(l, 0xffffff, 0, 0, 15, 15);
   l->updown(layerd::top+1);
+  window* test=new window(200, 200);
   xhci::init();
   while(1){
     if(kernelbuf->len==0){
@@ -84,6 +85,7 @@ extern "C" void nKernelmain(struct arg* ai){
         if(my>scrysize-1)my=scrysize-1;
         l->slide(mx, my);
       }else if(q==1){
+        asm("sti");
         xhci::posthandle();
       }
     }
