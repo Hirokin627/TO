@@ -21,6 +21,9 @@ typedef enum {
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#define ITS_WINDOW 2
+#define ITS_CS 4
+#define ITS_TB 8
 extern int* vram;
 extern int scrxsize,scrysize;
 class console;
@@ -136,6 +139,7 @@ union keybd{
     unsigned char d[8];
   } byte;
 };
+class window;
 class layer{
   public:
     layer(int xsize, int ysize);
@@ -150,6 +154,8 @@ class layer{
     int height;
     int manye;
     void registss(layer* s);
+    window* wc;
+    unsigned int flags;
     layer* slaves[256];
     layer* master;
 };
@@ -176,6 +182,7 @@ class fifo{
 class window{
   public:
     window(int,int);
+    void setactive(bool ac);
     layer* cs;
     layer* edge;
     layer* tb;
@@ -195,6 +202,7 @@ namespace layerd{
   void init();
   void refreshsub(int x0, int y0, int x1, int y1);
   extern int top;
+  layer* checkcrick(int mx, int my);
 };
 namespace graphic{
   void drawbox(layer* l, int c, int x0, int y0, int x1, int y1, bool nf=true);

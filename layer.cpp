@@ -26,6 +26,8 @@ namespace layerd{
     graphic::drawbox(bl, 0xffffff, scrxsize-3, scrysize-24, scrxsize-3, scrysize-3);
     bl->updown(0);
   }
+  unsigned int mixc(unsigned int bc, unsigned int fc, unsigned char i){
+  }
   void refreshsub(int x0, int y0, int x1, int y1){
     if(x0<0)x0=0;
     if(y0<0)y0=0;
@@ -55,6 +57,19 @@ namespace layerd{
       }
     }
   }
+  layer* checkcrick(int mx, int my){
+    for(int i=top-1;i>0;i--){
+      layer* l=layers[i];
+      int vx=mx-l->x;
+      int vy=my-l->y;
+      if(vx>=0&&vx<l->bxsize){
+        if(vy>=0&&vy<l->bysize){
+          return l;
+        }
+      }
+    }
+    return 0;
+  }
 };
 using namespace layerd;
 layer::layer(int xsize,int ysize){
@@ -68,14 +83,16 @@ void layer::updown(int nheight){
   if(nheight>top+1)nheight=top+1;
   int old=height;
   if(master){
-    height+=master->height;
-    if(old<master->height){
-    }else{
-      height+=1;
-    }
+    int noff=nheight;
+    nheight+=master->height;
+    if(old>=master->height)nheight++;
   }
   if(old<nheight){
     if(old>=0){
+      for(int i=old;i<nheight;i++){
+        layers[i]=layers[i+1];
+        layers[i]->height=i;
+      }
     }else{
       for(int i=top+1;i>nheight;i--){
         layers[i]=layers[i-1];
@@ -86,6 +103,11 @@ void layer::updown(int nheight){
     layers[nheight]=this;
   }else if(old>nheight){
     if(nheight>=0){
+      for(int i=old;i>nheight;i--){
+        layers[i]=layers[i-1];
+        layers[i]->height=i;
+      }
+      layers[nheight]=this;
     }else{
       for(int i=old;i<top;i++){
         layers[i]=layers[i+1];

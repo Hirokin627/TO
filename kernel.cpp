@@ -8,6 +8,7 @@ extern "C" caddr_t sbrk(size_t size){
   return (caddr_t)searchmem(size);
 }
 int mx,my;
+window* nowb;
 extern "C" void nKernelmain(struct arg* ai){
   cli();
   asm("cli");
@@ -17,14 +18,14 @@ extern "C" void nKernelmain(struct arg* ai){
   memory_init(ai->mems, ai->size ,ai->bsize);
   layerd::init();
   kernelbuf=new fifo(128);
-  cns=new console(60, scrysize/16);
+  cns=new console(60, (scrysize-36)/16);
   x64_init();
   pci::init();
   pic_init();
   asm("sti");
   ps2::init();
   for(int i=0;i<3;i++)cns->puts("test %d\n", i);
-  cns->l->updown(-1);
+  //cns->l->updown(-1);
   layer* l=new layer(16, 16);
   l->col_inv=-1;
   static char cursor[16][17]={
@@ -66,6 +67,8 @@ extern "C" void nKernelmain(struct arg* ai){
   l->updown(layerd::top+1);
   window* test=new window(200, 200);
   xhci::init();
+  window* mw;
+  int mpx,mpy;
   while(1){
     if(kernelbuf->len==0){
       asm("sti\nhlt");
@@ -77,6 +80,33 @@ extern "C" void nKernelmain(struct arg* ai){
         signed int x=kernelbuf->read();
         signed int y=kernelbuf->read();
         asm("sti");
+        if(c&1){
+          if(mw){
+            mpx+=x;
+            mpy+=y;
+          }
+          layer* l=layerd::checkcrick(mx, my);
+          if(!(l->flags&ITS_WINDOW))l=0;
+          if(nowb->cs!=l&&!mw){
+            nowb->setactive(false);
+          }
+          if(l){
+            if(l->flags&ITS_TB){
+              mw=l->master->wc;
+              mpx=x;
+              mpy=y;
+            }
+            if(l->master)l=l->master;
+            nowb=l->wc;
+            nowb->cs->updown(layerd::top-1);
+            nowb->setactive(true);
+          }
+        }else{
+          if(mw){
+            mw->cs->slide(mw->cs->x+mpx, mw->cs->y+mpy);
+            mw=0;
+          }
+        }
         mx=l->x+x;
         my=l->y+y;
         if(mx<0)mx=0;
@@ -87,6 +117,13 @@ extern "C" void nKernelmain(struct arg* ai){
       }else if(q==1){
         asm("sti");
         xhci::posthandle();
+      }else if(q==2){
+        unsigned char k=kernelbuf->read();
+        asm("sti");
+        if(k==1){
+          window* nw=new window(200, 200);
+        }
+        cns->puts("Key handled: %02x\n", k);
       }
     }
   }
