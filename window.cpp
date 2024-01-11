@@ -46,5 +46,9 @@ window::window(int cxsize, int cysize){
   tb->slide(3, 3);
   cs->registss(tb);
   cs->slide(200, 200);
+  if(nowb){
+    nowb->setactive(false);
+  }
+  nowb=this;
   cs->updown(layerd::top-1);
 }

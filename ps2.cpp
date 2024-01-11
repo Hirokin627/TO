@@ -7,10 +7,28 @@ namespace ps2{
   }
   unsigned char md[3];
   unsigned int mp=0;
+  int initphase=0;
+  void waitforkbc(){
+    while(io_in8(0x64)&2);
+  }
   __attribute__((interrupt)) void mousehandle(unsigned long long* esp){
     unsigned char d=io_in8(0x60);
     if(mp==0){
-      if(d==0xfa)mp=1;
+      if(d==0xfa){
+        if(initphase==-1){
+          mp=1;
+        }else if(initphase==0){
+          waitforkbc();
+          io_out8(0x64, 0xd4);
+          waitforkbc();
+          io_out8(0x60, 0xf3);
+          waitforkbc();
+          io_out8(0x64, 0xd4);
+          waitforkbc();
+          io_out8(0x60, 60);
+          initphase=-1;
+        }
+      }
     }else if(mp==1){
       if((d&0xc8)==8){
         md[0]=d;
@@ -33,9 +51,6 @@ namespace ps2{
     }
     io_out8(0xa0, 0x64);
     io_out8(0x20, 0x62);
-  }
-  void waitforkbc(){
-    while(io_in8(0x64)&2);
   }
   void init(){
     set_idt(0x21, (unsigned long long)keyhandle, 8, 0x8e);

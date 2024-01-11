@@ -24,11 +24,13 @@ typedef enum {
 #define ITS_WINDOW 2
 #define ITS_CS 4
 #define ITS_TB 8
+class console;
+class fifo;
+class window;
 extern int* vram;
 extern int scrxsize,scrysize;
-class console;
+extern window* nowb;
 extern console* cns;
-class fifo;
 extern fifo* kernelbuf;
 extern int mx,my;
 typedef unsigned long addr_t;
@@ -139,7 +141,6 @@ union keybd{
     unsigned char d[8];
   } byte;
 };
-class window;
 class layer{
   public:
     layer(int xsize, int ysize);
@@ -221,6 +222,9 @@ namespace xhci{
   void init();
 };
 namespace ps2{
+  void init();
+};
+namespace timer{
   void init();
 };
 extern "C"{

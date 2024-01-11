@@ -24,8 +24,9 @@ extern "C" void nKernelmain(struct arg* ai){
   pic_init();
   asm("sti");
   ps2::init();
+  timer::init();
   for(int i=0;i<3;i++)cns->puts("test %d\n", i);
-  //cns->l->updown(-1);
+  cns->l->updown(-1);
   layer* l=new layer(16, 16);
   l->col_inv=-1;
   static char cursor[16][17]={
@@ -90,8 +91,8 @@ extern "C" void nKernelmain(struct arg* ai){
           if(nowb->cs!=l&&!mw){
             nowb->setactive(false);
           }
-          if(l){
-            if(l->flags&ITS_TB){
+          if(l&&!mw){
+            if((l->flags&ITS_TB)){
               mw=l->master->wc;
               mpx=x;
               mpy=y;
@@ -123,7 +124,6 @@ extern "C" void nKernelmain(struct arg* ai){
         if(k==1){
           window* nw=new window(200, 200);
         }
-        cns->puts("Key handled: %02x\n", k);
       }
     }
   }
