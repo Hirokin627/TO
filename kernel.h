@@ -224,7 +224,7 @@ namespace xhci{
 namespace ps2{
   void init();
 };
-namespace timer{
+namespace timerd{
   void init();
 };
 extern "C"{

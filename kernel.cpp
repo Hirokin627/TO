@@ -24,9 +24,9 @@ extern "C" void nKernelmain(struct arg* ai){
   pic_init();
   asm("sti");
   ps2::init();
-  timer::init();
+  timerd::init();
   for(int i=0;i<3;i++)cns->puts("test %d\n", i);
-  cns->l->updown(-1);
+  //cns->l->updown(-1);
   layer* l=new layer(16, 16);
   l->col_inv=-1;
   static char cursor[16][17]={

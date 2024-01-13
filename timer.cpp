@@ -1,13 +1,8 @@
 #include "kernel.h"
-namespace timer{
-  int i;
-  __attribute__((interrupt)) void timerhandle(unsigned long long* esp){
-    vram[i]=0;
-    i++;
-    io_out8(0x20, 0x60);
-  }
+namespace timerd{
   void init(){
-    set_idt(0x20, (unsigned long long)timerhandle, 8, 0x8e);
-    open_irq(0);
+    io_out8(0x43, 0x34);
+    io_out8(0x40, 0x9c);
+    io_out8(0x40, 0x2e);
   }
 };

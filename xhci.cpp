@@ -220,6 +220,7 @@ namespace xhci{
           }else if(p[1]==4&&drivers[slot]==0){
             struct interfacedescriptor* i=(struct interfacedescriptor*)p;
             slots[slot].id=*i;
+            cns->puts("device class=%d\n", i->binterfaceclass);
             if(i->binterfaceclass==3){
               drivers[slot]=new hid();
               supported=true;
@@ -230,6 +231,7 @@ namespace xhci{
                   slots[slot].type=USBMouse;
                 }else{
                   cns->puts("This is Keyboard!\n");
+                  asm("cli\nhlt");
                   slots[slot].type=USBKeyboard;
                 }
               }else{
@@ -260,9 +262,9 @@ namespace xhci{
         ct.slot=slot;
         ct.dc=0;
         ct.pointer=(unsigned long long)icc;
-        if(supported){
           cr->push((struct TRB*)&ct);
           db[0]=0;
+        if(supported){
         }else{
           cns->puts("Not suported\n");
         }
