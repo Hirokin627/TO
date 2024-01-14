@@ -44,7 +44,7 @@ namespace xhci{
   void resetport(unsigned char port){
     if(addrport>0){
       ports[port].phase=waitfree;
-    }else if((ope->portset[port].portsc&1)&&(ope->portset[port].portsc&0x20000)){
+    }else if((ope->portset[port].portsc&1)){
       unsigned int sc=ope->portset[port].portsc;
       sc&= 0x0e00c3e0u;
       sc|=1<<4;
@@ -201,6 +201,14 @@ namespace xhci{
     //if(slot==1)setcr3(0);
     struct TRB* t=(struct TRB*)trb->pointer;
     //cns->puts("Trans slot=%d code=%d trbtransferlength=%x type=%d\n", slot, trb->code, trb->trbtransferlength, t->type);
+    if(trb->code==4){
+      cns->puts("Error slot=%d code=%d\n", slot, trb->code);
+      slots[slot].phase=waitreset;
+      unsigned char port=slots[slot].port;
+      ports[port].phase=waitreset;
+      ports[slot].haveerr=1;
+      resetport(port);
+    }
     if(slots[slot].phase==getcdesc){
       if(trb->code==1||trb->code==13){
         struct dataTRB* tb=(struct dataTRB*)t;
@@ -231,7 +239,6 @@ namespace xhci{
                   slots[slot].type=USBMouse;
                 }else{
                   cns->puts("This is Keyboard!\n");
-                  asm("cli\nhlt");
                   slots[slot].type=USBKeyboard;
                 }
               }else{
@@ -255,6 +262,8 @@ namespace xhci{
             epcont->interval=e->binterval;
             if((dci&1)&&(slots[slot].intin==0))slots[slot].intin=dci;
             cns->puts("dci=%d eptype=%d\n", dci, epcont->eptype);
+          }else if(p[1]==33){
+            cns->puts("report length=%d type=%d\n", *(unsigned short*)&p[7], *(unsigned char*)&p[6]);
           }
           p+=p[0];
         }
@@ -396,6 +405,7 @@ namespace xhci{
     while(ope->usbsts&1);
     for(int i=1;i<=maxports;i++){
       ports[i].phase=waitreset;
+      ports[i].haveerr=0;
       if((ope->portset[i].portsc&1)&&(ope->portset[i].portsc&(1<<17))){
         resetport(i);
       }
@@ -403,7 +413,6 @@ namespace xhci{
     io_out8(0x20, 0x62);
     io_out8(0xa0, 0x63);
     rr->ir[0].ip=1;
-    asm("int $0x2b");
     cns->puts("USBSTS=%08x\n", ope->usbsts);
   }
 };

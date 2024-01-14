@@ -401,6 +401,7 @@ enum devicetype{
 struct port{
   enum portp phase;
   unsigned char slot;
+    unsigned char haveerr;
 };
 struct slot{
   enum portp phase;
@@ -423,6 +424,7 @@ class classd{
     virtual void comp(struct transfertrb* t){
     }
     unsigned char slot;
+    unsigned int reportlength;
 };
 class hid : public classd{
   public:
@@ -435,10 +437,14 @@ class hid : public classd{
     unsigned int xoff,yoff,boff;
     unsigned int xsize,ysize,bsize;
     unsigned int xmax,xmin,ymax,ymin;
+    unsigned int kaoff,kasize;
+    unsigned char off;
 };
 namespace xhci{
   extern CR* tr[8][32];
   extern unsigned int *db;
   extern struct slot* slots;
+  extern struct port* ports;
   void controltrans(unsigned char slot,unsigned char bmrequesttype, unsigned char brequest, unsigned short wvalue, unsigned short windex, unsigned short wlength, unsigned long long pointer, unsigned char dir);
+  void resetport(unsigned char port);
 };

@@ -188,6 +188,15 @@ class window{
     layer* edge;
     layer* tb;
 };
+class timer{
+  public:
+    void set(unsigned int c, unsigned char cy=0);
+    unsigned int timeout;
+    unsigned char cyc;
+    timer* next;
+    timer* prev;
+    unsigned int flags;
+};
 void memory_init(EFI_MEM* mems, unsigned long long dsize, unsigned long long bsize);
 void x64_init();
 unsigned long long getpaddr(unsigned long long* p4, unsigned long long vaddr);

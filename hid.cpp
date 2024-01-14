@@ -13,6 +13,8 @@ unsigned long long getd(unsigned char* a){
   return v;
 }
 unsigned int getdfornt(unsigned char* p, unsigned char bsize){
+  bsize+=7;
+  bsize/=8;
   unsigned int v=0;
   for(int i=0;i<bsize;i++){
     v|=p[i]<<(i*8);
@@ -34,56 +36,89 @@ void decoderd(hid* d, unsigned char* p, unsigned long long size){
   unsigned int bo=0,bp=0;
   unsigned int rs=0;
   while(lp>p){
-    if(cc>0){
       if(gete(p)==0xc0){
+        cns->puts("collec end\n");
         cc--;
       }else if(gete(p)==4){
+        cns->puts("Usage Page(%x)\n", getd(p));
         unsigned char pg=getd(p);
         p+=p[0]&3;
         p++;
         unsigned int lmin=0,lmax=0;
         fifo* u=new fifo(128);
         unsigned int cnt=0;
-        while(gete(p)!=0x80){
+        while(gete(p)!=0x80&&gete(p)!=0x90){
           if(gete(p)==0x14){
+            cns->puts("log min(%x)\n", getd(p));
             lmin=getd(p);
           }else if(gete(p)==0x24){
+            cns->puts("log max(%x)\n", getd(p));
             lmax=getd(p);
           }else if(gete(p)==8){
-            u->write(getd(p));
+            cns->puts("Usage (%x)\n", getd(p));
+            if(getd(p)==2){
+              cns->puts("This is MOUSE(TRUE!!!!!!!!)\n");
+              slots[slot].type=USBRMouse;
+              break;
+            }else if(getd(p)==1)break;
+            else if(getd(p)==6){
+              slots[slot].type=USBRKeyboard;
+              break;
+            }else u->write(getd(p));
           }else if(gete(p)==0x74){
+            cns->puts("Report size(%x)\n", getd(p));
             rs=getd(p);
           }else if(gete(p)==0x94){
+            cns->puts("Report count(%x)\n", getd(p));
             cnt=getd(p);
           }
           p+=p[0]&3;
           p++;
         }
+        cns->puts("Input or Output\n");
         int mu=u->len;
-        if(pg==9&&!mu){
+        if(pg==9){
           d->boff=bo;
           d->bsize=rs;
           plus(&bo, &bp, rs*cnt);
-        }
-        while(mu){
-          unsigned char ui=u->read();
-          mu--;
-          if(ui==0x30){
-            d->xoff=bo;
-            d->xsize=rs/8;
-            d->xmax=lmax;
-            d->xmin=lmin;
-          }else if(ui==0x31){
-            d->yoff=bo;
-            d->ysize=rs/8;
-            d->ymax=lmax;
-            d->xmin=lmin;
+        }else if(pg==1){
+          while(mu){
+            unsigned char ui=u->read();
+            mu--;
+            if(ui==0x30){
+              d->xoff=bo;
+              d->xsize=rs;
+              d->xmax=lmax;
+              d->xmin=lmin;
+              cns->puts("x addr bit=%d byte=%d\n", bp, bo);
+              cns->puts("Value attr:%02x\n", getd(p)); 
+              d->off=getd(p)==6;
+            }else if(ui==0x31){
+              d->yoff=bo;
+              d->ysize=rs;
+              d->ymax=lmax;
+              d->xmin=lmin;
+              cns->puts("y addr bit=%d byte=%d\n", bp, bo);
+            }
+            plus(&bo, &bp, rs);
           }
-          plus(&bo, &bp, rs);
+        }else if(pg==12){
+          plus(&bo, &bp, rs*cnt);
+        }else if(pg==7){
+          if(getd(p)==0){
+            d->kaoff=bo;
+            d->kasize=cnt;
+          }
+          cns->puts("rs=%d cnt=%d\n", rs, cnt);
+          plus(&bo, &bp, rs*cnt);
+        }else{
+          plus(&bo, &bp, rs*cnt);
         }
+        delete u;
       }else if(gete(p)==0x94||gete(p)==0x74){
         int cnt=0;
         int btsize=rs;
+        cns->puts("Pedding\n");
         while(gete(p)!=0x80){
           if(gete(p)==0x94){
             cnt=getd(p);
@@ -93,72 +128,98 @@ void decoderd(hid* d, unsigned char* p, unsigned long long size){
           p+=p[0]&3;
           p++;
         }
+        cns->puts("Size: cnt=%d btsize=%d\n", cnt, btsize);
         plus(&bo, &bp, cnt*btsize);
       }
-    }else{
       if(gete(p)==8){
         uint8_t t=getd(p);
+        cns->puts("type(guess): %02x\n", t);
         if(t==2){
           slots[slot].type=USBRMouse;
+        }else{
         }
       }else if(gete(p)==0xa0){
-        //cns->puts("Collec start\n");
         cc++;
+      }else{
       }
-    }
     p+=p[0]&3;
     p++;
   }
+  bo++;
+  d->nt->trbtransferlength=bo;
+  if(bo>9){
+    delete d->buf;
+    d->buf=(unsigned char*)searchmem(bo);
+  }
+  if(slots[slot].type==USBRKeyboard){
+    if(d->kasize==0){
+      ports[slots[slot].port].haveerr=1;
+      unsigned char port=slots[slot].port;
+      ports[port].phase=waitreset;
+      slots[slot].phase=waitreset;
+      resetport(port);
+    }
+  }
+  cns->puts("Total report length:%d (bo=%d bp=%d)\n", bo, bo-1, bp);
 }
 };
 using namespace hidd;
+#define reportlength 800
 void hid::init(unsigned char s){
   using namespace xhci;
   slot=s;
   initphase=0;
-  isr=slots[slot].id.binterfacesubclass^1;
-  buf=(unsigned char*)searchmem(8);
+  buf=(unsigned char*)searchmem(9);
   nt=new normalTRB;
   nt->pointer=(unsigned long long)buf;
-  nt->trbtransferlength=8;
+  nt->trbtransferlength=4;
   nt->ioc=1;
   cns->puts("HID\n");
-  if(!isr)controltrans(slot, 0b00100001, 11, 0, slots[slot].intn, 0, 0, 0);
-  else controltrans(slot, 0b10000001, 6, 0x2200, slots[slot].intn, 0x100, searchmem(0x100), 1);
+  isr=slots[slot].id.binterfacesubclass^1;
+  if(isr)controltrans(slot, 0b10000001, 6, 0x2200, slots[slot].intn, reportlength, searchmem(reportlength), 1);
+  else
+    controltrans(slot, 0b00100001, 11, 0, slots[slot].intn, 0, 0, 0);
 }       
 void hid::comp(struct transfertrb* t){
   using namespace xhci;
-  if(!isr){
-      if(slots[slot].type==USBMouse){
-        asm("cli");
-        kernelbuf->write(0);
-        kernelbuf->write(buf[0]);
-        kernelbuf->write((signed char)buf[1]);
-        kernelbuf->write((signed char)buf[2]);
-        asm("sti");
-      }
-      tr[slot][slots[slot].intin]->push((struct TRB*)nt);
-      db[slot]=slots[slot].intin;
-      initphase=1;
-  }else{
+  if(isr&&t->code!=4){
     if(initphase==0){
-      decoderd(this, (unsigned char*)*(unsigned long long*)*(unsigned long long*)t, 0x100-t->trbtransferlength);
+    off=1; //マウスじゃなかったときのため（off=0だと/xmaxでエラー泊）
+      decoderd(this, (unsigned char*)*(unsigned long long*)*(unsigned long long*)t, reportlength-t->trbtransferlength);
+      if(slots[slot].type==USBRKeyboard&&kasize==0)return;
       initphase=1;
       controltrans(slot, 0b00100001, 11, 1, slots[slot].intn, 0, 0, 0);
-      cns->puts("HID port=%d\n", slots[slot].port);
     }else{
-      int nmx=getdfornt(&buf[xoff], xsize)*scrxsize/xmax;
-      int nmy=getdfornt(&buf[yoff], ysize)*scrysize/ymax;
-      int px=nmx-mx;
-      int py=nmy-my;
-      asm("cli");
-      kernelbuf->write(0);
-      kernelbuf->write(getdfornt(&buf[boff], bsize));
-      kernelbuf->write((signed int)px);
-      kernelbuf->write((signed int)py);
-      asm("sti");
-      tr[slot][slots[slot].intin]->push((struct TRB*)nt);
-      db[slot]=slots[slot].intin;
+      if(!off){
+        int nmx=getdfornt(&buf[xoff], xsize)*scrxsize/xmax;
+        int nmy=getdfornt(&buf[yoff], ysize)*scrysize/ymax;
+        int px=nmx-mx;
+        int py=nmy-my;
+        asm("cli");
+        kernelbuf->write(0);
+        kernelbuf->write(getdfornt(&buf[boff], bsize));
+        kernelbuf->write((signed int)px);
+        kernelbuf->write((signed int)py);
+        asm("sti");
+      }else{
+        asm("cli");
+        kernelbuf->write(0);
+        kernelbuf->write(getdfornt(&buf[boff], 8));
+        kernelbuf->write((signed char)getdfornt(&buf[xoff], xsize));
+        kernelbuf->write((signed char)getdfornt(&buf[yoff], ysize));
+        asm("sti");
+      }
     }
+    tr[slot][slots[slot].intin]->push((struct TRB*)nt);
+    db[slot]=slots[slot].intin;
+  }else if(!isr){
+    asm("cli");
+    kernelbuf->write(0);
+    kernelbuf->write((signed char)buf[0]);
+    kernelbuf->write((signed char)buf[1]);
+    kernelbuf->write((signed char)buf[2]);
+    asm("sti");
+    tr[slot][slots[slot].intin]->push((struct TRB*)nt);
+    db[slot]=slots[slot].intin;
   }
 }

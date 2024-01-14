@@ -18,7 +18,7 @@ extern "C" void nKernelmain(struct arg* ai){
   memory_init(ai->mems, ai->size ,ai->bsize);
   layerd::init();
   kernelbuf=new fifo(128);
-  cns=new console(60, (scrysize-36)/16);
+  cns=new console(60, (scrysize)/16);
   x64_init();
   pci::init();
   pic_init();
