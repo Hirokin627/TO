@@ -235,6 +235,7 @@ namespace ps2{
 };
 namespace timerd{
   void init();
+  void sleep(unsigned int ms10);
 };
 extern "C"{
   void setcr3(unsigned long long*);
@@ -247,4 +248,5 @@ extern "C"{
   void io_out32(short, unsigned int);
   unsigned int rflags();
   void srflags(unsigned int);
+  void switchcont(struct tc*, struct tc*);
 };

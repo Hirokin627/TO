@@ -26,6 +26,12 @@ namespace timerd{
     set_idt(0x20, (unsigned long long)timerhandle, 8, 0x8e);
     open_irq(0);
   }
+  void sleep(unsigned int ms10){
+    timer* tm=new timer;
+    tm->set(ms10);
+    while(!(tm->flags&1));
+    delete tm;
+  }
 };
 using namespace timerd;
 void timer::set(unsigned int cnt, unsigned char cy){

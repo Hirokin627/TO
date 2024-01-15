@@ -145,7 +145,7 @@ void decoderd(hid* d, unsigned char* p, unsigned long long size){
     p+=p[0]&3;
     p++;
   }
-  bo++;
+  bo+=(bp%8);
   d->nt->trbtransferlength=bo;
   if(bo>9){
     delete d->buf;
