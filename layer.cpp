@@ -26,7 +26,23 @@ namespace layerd{
     graphic::drawbox(bl, 0xffffff, scrxsize-3, scrysize-24, scrxsize-3, scrysize-3);
     bl->updown(0);
   }
+  unsigned char getr(unsigned int c){
+    return (c>>16)&0xff;
+  }
+  unsigned char getg(unsigned int c){
+    return (c>>8)&0xff;
+  }
+  unsigned char getb(unsigned int c){
+    return (c>>0)&0xff;
+  }
   unsigned int mixc(unsigned int bc, unsigned int fc, unsigned char i){
+    unsigned short r=getr(bc)*i/255;
+    r+=getr(fc)*(255-i)/255;
+    unsigned short g=getg(bc)*i/255;
+    g+=getg(fc)*(255-i)/255;
+    unsigned short b=getb(bc)*i/255;
+    b+=getb(fc)*(255-i)/255;
+    return (r<<16)|(g<<8)|b;
   }
   void refreshsub(int x0, int y0, int x1, int y1){
     if(x0<0)x0=0;
@@ -47,7 +63,10 @@ namespace layerd{
         int vy=l->y+by;
         for(int bx=bx0;bx<bx1;bx++){
           int vx=l->x+bx;
-          if(l->buf[by*l->bxsize+bx]!=l->col_inv)sb[vy*scrxsize+vx]=l->buf[by*l->bxsize+bx];
+          unsigned int c=l->buf[by*l->bxsize+bx];
+          if(c==l->col_inv)c=-1;
+          if((c>>24)!=0)c=mixc(sb[vy*scrxsize+vx], c, c>>24);
+          sb[vy*scrxsize+vx]=c;
         }
       }
     }
