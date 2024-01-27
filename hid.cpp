@@ -165,6 +165,9 @@ void decoderd(hid* d, unsigned char* p, unsigned long long size){
 };
 using namespace hidd;
 #define reportlength 800
+unsigned char calcepaddr(unsigned char a){
+  return (a&3)*2+(a>>7);
+}
 void hid::init(unsigned char s){
   using namespace xhci;
   slot=s;
@@ -172,13 +175,35 @@ void hid::init(unsigned char s){
   buf=(unsigned char*)searchmem(9);
   nt=new normalTRB;
   nt->pointer=(unsigned long long)buf;
-  nt->trbtransferlength=4;
+  nt->trbtransferlength=8;
   nt->ioc=1;
   cns->puts("HID\n");
-  isr=slots[slot].id.binterfacesubclass^1;
+  cns->puts("sub=%d\n", id.binterfacesubclass);
+  isr=id.binterfacesubclass^1;
+  unsigned char* p=fulld;
+  do {
+    if(p[0]==0)break;   
+    if(p[1]==4){
+      slots[slot].intn=p[2];
+      cns->puts("protocol=%d\n", p[7]);
+    }
+    if(p[1]==5){
+      if(p[2]&0x80){
+        unsigned char t=p[3]&3;
+        t+=(p[2]>>7)*4;;
+        cns->puts("ep type=%d addr=%d\n", t, calcepaddr(p[2]));
+        if(t==7){
+          intin=calcepaddr(p[2]);
+        }
+      }
+    }
+    p+=p[0];
+  }while(p[1]!=4);
+  cns->puts("intn=%d indci=%d isr=%d\n", slots[slot].intn, intin, isr);
   if(isr)controltrans(slot, 0b10000001, 6, 0x2200, slots[slot].intn, reportlength, searchmem(reportlength), 1);
   else
     controltrans(slot, 0b00100001, 11, 0, slots[slot].intn, 0, 0, 0);
+  initialized=1;
 }       
 void hid::comp(struct transfertrb* t){
   using namespace xhci;
@@ -210,16 +235,27 @@ void hid::comp(struct transfertrb* t){
         asm("sti");
       }
     }
-    tr[slot][slots[slot].intin]->push((struct TRB*)nt);
-    db[slot]=slots[slot].intin;
-  }else if(!isr){
-    asm("cli");
-    kernelbuf->write(0);
-    kernelbuf->write((signed char)buf[0]);
-    kernelbuf->write((signed char)buf[1]);
-    kernelbuf->write((signed char)buf[2]);
-    asm("sti");
-    tr[slot][slots[slot].intin]->push((struct TRB*)nt);
-    db[slot]=slots[slot].intin;
+    tr[slot][intin]->push((struct TRB*)nt);
+    db[slot]=intin;
+  }
+  if(!isr){
+    if(id.binterfaceprotocol==2){
+      asm("cli");
+      kernelbuf->write(0);
+      kernelbuf->write((signed char)buf[0]);
+      kernelbuf->write((signed char)buf[1]);
+      kernelbuf->write((signed char)buf[2]);
+      asm("sti");
+      tr[slot][intin]->push((struct TRB*)nt);
+      db[slot]=intin;
+    }else if(id.binterfaceprotocol==1){
+      asm("cli");
+      kernelbuf->write(5);
+      kernelbuf->write((unsigned long long)buf);
+      kernelbuf->write(0);
+      asm("sti");
+      tr[slot][intin]->push((struct TRB*)nt);
+      db[slot]=intin;
+    }
   }
 }

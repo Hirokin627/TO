@@ -85,12 +85,8 @@ unsigned char mpb=0xff;
 unsigned char spb=0xff;
 bool intf=true;
 void cli(){
-  io_out8(0x21, 0xff);
-  io_out8(0xa1, 0xff);
 }
 void sti(){
-  io_out8(0x21, mpb);
-  io_out8(0xa1, spb);
 }
 void allocpage(unsigned long long* p4, addr_t vaddr, addr_t paddr, size_t size, char flags){
   for(size_t i=0;i<(size+0xfff);i+=0x1000){

@@ -49,8 +49,6 @@ void reservmem(addr_t addr, size_t size){
   }
 }
 unsigned long long searchmem(size_t size){
-  unsigned int r=rflags();
-  asm("cli");
   size_t bsize=(size+0xfff)/0x1000;
   unsigned long long c=0,b=0;
   for(unsigned int i=0;i<sizeof(bitmap)*8;i++){
@@ -63,7 +61,6 @@ unsigned long long searchmem(size_t size){
         al[alp].size=bsize*0x1000;
         alp++;
         mymemset((void*)(b*4096), size, 0);
-        srflags(r);
         return b*4096;
       }
     }else{
@@ -74,8 +71,6 @@ unsigned long long searchmem(size_t size){
   return -1;
 }
 void freemem(addr_t addr){
-  unsigned int r=rflags();
-  asm("cli");
   size_t size=-1;
   int i;
   for(i=0;i<alp;i++){
@@ -92,7 +87,6 @@ void freemem(addr_t addr){
   size/=0x1000;
   for(int i=0;i<size;i++)
     clearbit(addr/4096+i);
-  srflags(r);
 }
 void* operator new (size_t size){
   return (void*)searchmem(size);

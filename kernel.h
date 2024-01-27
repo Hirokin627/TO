@@ -176,7 +176,6 @@ class fifo{
     fifo(int sz);
     void write(unsigned long long d);
     unsigned long long read();
-    unsigned long long front(){return datas[rp];};
     unsigned long long* datas;
     int rp,wp;
     int len,size;
@@ -197,12 +196,6 @@ class timer{
     timer* next;
     timer* prev;
     unsigned int flags;
-};
-class task{
-  public:
-    task(unsigned long long);
-    void run();
-    struct tc* ct;
 };
 void memory_init(EFI_MEM* mems, unsigned long long dsize, unsigned long long bsize);
 void x64_init();
@@ -243,11 +236,6 @@ namespace ps2{
 namespace timerd{
   void init();
   void sleep(unsigned int ms10);
-};
-namespace mtask{
-  extern timer* mt;
-  void taskswitch(bool cc=false);
-  task* init();
 };
 extern "C"{
   void setcr3(unsigned long long*);

@@ -413,8 +413,7 @@ struct slot{
   unsigned char nt;
   enum devicetype type;
     struct configurationdescriptor ds;
-    unsigned char* fulld;
-    struct interfacedescriptor id;
+    int ip;
 };
 class classd{
   public:
@@ -423,13 +422,19 @@ class classd{
     }
     virtual void comp(struct transfertrb* t){
     }
+    char initialized;
+    unsigned char* fulld;
+    struct interfacedescriptor id;
     unsigned char slot;
     unsigned int reportlength;
+    int me;
+    int eps[31];
 };
 class hid : public classd{
   public:
     void init(unsigned char s) override;
     void comp(struct transfertrb* t) override;
+    unsigned int intin;
     int initphase;
     bool isr;
     unsigned char* buf;
@@ -439,6 +444,13 @@ class hid : public classd{
     unsigned int xmax,xmin,ymax,ymin;
     unsigned int kaoff,kasize;
     unsigned char off;
+};
+class mass : public classd{
+  public:
+    void init(unsigned char s) override;
+    void comp(struct transfertrb* t) override;
+    int initphase;
+    unsigned char* maxlun;
 };
 namespace xhci{
   extern CR* tr[8][32];

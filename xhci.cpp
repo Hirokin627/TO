@@ -35,7 +35,7 @@ namespace xhci{
   struct ERST* erst;
   struct RR* rr;
   char addrport=0;
-  classd* drivers[256];
+  classd* drivers[256][50];
   void clearbitportsc(unsigned char port, unsigned char b){
     unsigned int sc=ope->portset[port].portsc;
     sc&=~(1<<b);
@@ -45,6 +45,7 @@ namespace xhci{
     if(addrport>0){
       ports[port].phase=waitfree;
     }else if((ope->portset[port].portsc&1)){
+      addrport=port;
       unsigned int sc=ope->portset[port].portsc;
       sc&= 0x0e00c3e0u;
       sc|=1<<4;
@@ -54,8 +55,7 @@ namespace xhci{
       ope->portset[port].portsc=sc;
       while(ope->portset[port].portsc&0x10);
       ports[port].phase=resetting;
-      cns->puts("resetting\n");
-      addrport=port;
+      cns->puts("resetting %d\n", addrport);
     }
   }
   void enableslot(){
@@ -133,7 +133,7 @@ namespace xhci{
     struct TRB* t=(struct TRB*)trb->ctrb;
     cns->puts("slot=%d code=%d type=%d\n", slot, trb->code, t->type);
     if(t->type==9){
-      drivers[slot]=0;
+      drivers[slot][0]=0;
       cns->puts("addrport=%d portsc=%08x\n", addrport, ope->portset[addrport].portsc);
       slots[slot].port=addrport;
       ports[addrport].slot=slot;
@@ -161,9 +161,6 @@ namespace xhci{
       delete at;
     }else if(t->type==11){
       addrport=0;
-      for(int i=1;i<=maxports;i++){
-        if(ports[i].phase==waitfree)resetport(i);
-      }
       slots[slot].phase=getcdesc;
       //for(int i=0;i<100000000;i++);
       /*struct setupTRB st{};
@@ -191,7 +188,25 @@ namespace xhci{
       controltrans(slot, 0b10000000, 6, 0x200, 0, 0x100, searchmem(0x100), 1);
       //enableslot();
     }else if(t->type==12){
-      controltrans(slot, 0, 9, slots[slot].ds.bconfigurationvalue, 0, 0, 0, 0);
+      if(t->rsv>>8){
+        cns->puts("deconf\n");
+        struct disableslotTRB dt{};
+        dt.slot=slot;
+        cr->push((struct TRB*)&dt);
+        db[0]=0;
+      }else{
+        controltrans(slot, 0, 9, slots[slot].ds.bconfigurationvalue, 0, 0, 0, 0);
+      }
+    }else if(t->type==10){
+      bool deldesc=1;
+      for(int i=0;i<50;i++){
+        if(drivers[slot][i]){
+          if(deldesc){
+          }
+          delete drivers[slot][i];
+        }
+      }
+      delete dcbaa[slot];
     }else{
       cns->puts("OTher %d\n", t->type);
     }
@@ -201,6 +216,22 @@ namespace xhci{
     //if(slot==1)setcr3(0);
     struct TRB* t=(struct TRB*)trb->pointer;
     //cns->puts("Trans slot=%d code=%d trbtransferlength=%x type=%d\n", slot, trb->code, trb->trbtransferlength, t->type);
+    int ep=trb->endpoint;
+    int di=-1;
+    for(int i=0;i<50;i++){
+      if(drivers[slot][i]!=0){
+        for(int j=0;j<drivers[slot][i]->me;j++){
+          if(ep==drivers[slot][i]->eps[j])di=drivers[slot][i]->id.binterfacenumber;
+        }
+      }
+    }
+    if(di==-1){
+      struct setupTRB* tb=(struct setupTRB*)t;
+      tb--;
+      cns->puts("setup type=%d\n", tb->type);
+      di=tb->windex;
+    }
+    
     if(trb->code==4){
       cns->puts("Error slot=%d code=%d\n", slot, trb->code);
       slots[slot].phase=waitreset;
@@ -218,19 +249,25 @@ namespace xhci{
         struct inputc* icc=new struct inputc;
         icc->scc=dcbaa[slot]->scc;
         bool supported=false;
-        slots[slot].fulld=p;
+        slots[slot].ip=0;
+        unsigned int in=0;
+        for(int i=0;i<50;i++)drivers[slot][i]=0;
         while(lp>p){
           cns->puts("type=%d\n", p[1]);
           if(p[1]==2){
             struct configurationdescriptor* d=(struct configurationdescriptor*)p;
             cns->puts("configurationvalue %d\n", d->bconfigurationvalue);
             slots[slot].ds=*d;
-          }else if(p[1]==4&&drivers[slot]==0){
+          }else if(p[1]==4){
             struct interfacedescriptor* i=(struct interfacedescriptor*)p;
-            slots[slot].id=*i;
-            cns->puts("device class=%d\n", i->binterfaceclass);
-            if(i->binterfaceclass==3){
-              drivers[slot]=new hid();
+            in=i->binterfacenumber;
+            cns->puts("device class=%d in=%d\n", i->binterfaceclass, in);
+            if(i->binterfaceclass==3){ 
+              drivers[slot][in]=new hid();
+              drivers[slot][in]->initialized=0;
+              drivers[slot][in]->id=*i;
+              drivers[slot][in]->fulld=(unsigned char*)i;
+              slots[slot].ip++;
               supported=true;
               if(i->binterfacesubclass==1){
                 cns->puts("using boot protocol\n");
@@ -245,9 +282,15 @@ namespace xhci{
                 cns->puts("using report protocol\n");
                 slots[slot].type=USBRdevice;
               }
+            }else if(i->binterfaceclass==8){
+              drivers[slot][in]=new mass;
+              drivers[slot][in]->id=*i;
+              supported=true;
             }else{
-              drivers[slot]=new classd;
+              drivers[slot][in]=new classd;
+              drivers[slot][in]->id=*i;
             }
+            drivers[slot][in]->fulld=p;
           }else if(p[1]==5){
             struct endpointdescriptor* e=(struct endpointdescriptor*)p;
             unsigned char dci=e->bendpointaddress*2;
@@ -260,8 +303,9 @@ namespace xhci{
             epcont->trdp=(unsigned long long)tr[slot][dci]->ring|1;
             epcont->cerr=3;
             epcont->interval=e->binterval;
-            if((dci&1)&&(slots[slot].intin==0))slots[slot].intin=dci;
-            cns->puts("dci=%d eptype=%d\n", dci, epcont->eptype);
+            cns->puts("dci=%d eptype=%d in=%d\n", dci, epcont->eptype, in);
+            drivers[slot][in]->eps[drivers[slot][in]->me]=dci;
+            drivers[slot][in]->me++;
           }else if(p[1]==33){
             cns->puts("report length=%d type=%d\n", *(unsigned short*)&p[7], *(unsigned char*)&p[6]);
           }
@@ -282,9 +326,25 @@ namespace xhci{
     }else if(slots[slot].phase==setconf){
       cns->puts("starting ");
       slots[slot].phase=starting;;
-      drivers[slot]->init(slot);
+      for(int i=0;i<50;i++){
+        if(drivers[slot][i]!=0){
+          drivers[slot][i]->init(slot);
+          break;
+        }
+      }
     }else{
-      drivers[slot]->comp(trb);
+      for(int i=0;i<50;i++){
+        if(drivers[slot][i]!=0){
+          if(drivers[slot][i]->initialized==0){
+            drivers[slot][i]->init(slot);
+            break;
+          }
+        }
+      }
+      drivers[slot][di]->comp(trb);
+      for(int i=1;i<=maxports;i++){
+        if(ports[i].phase==waitfree)resetport(i);
+      }
     }
   }
   void posthandle(){
