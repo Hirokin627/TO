@@ -2,21 +2,29 @@
 namespace massd{
 };
 using namespace xhci;
+using namespace massd;
 void mass::init(unsigned char s){
   slot=s;
+  initialized=1;
   cns->puts("mass strage class\n");
   initphase=0;
   cns->puts("sub class=%d protocol=%x\n", id.binterfacesubclass, id.binterfaceprotocol);
+  unsigned char* p=fulld;
+  p+=p[0];
+  do {
+    if(p[0]==0)break;
+    if(p[1]==5){
+      unsigned char ep=calcepaddr(p[2]);
+      unsigned char ept=p[3]&3;
+      ept+=(p[2]>>7)*4;
+      if(ept==6)bulkin=ep;
+      else if(ept==2)bulkout=ep;
+    }
+    p+=p[0];
+  }while(p[1]!=4);
+  cns->puts("bulkin=%d\n", bulkin);
   controltrans(slot, 0b00100001, 0xff, 0, id.iinterface, 0, 0, 0);
 }
 void mass::comp(struct transfertrb* t){
   cns->puts("reset code=%d\n", t->code);
-  if(initphase==0){
-    maxlun=(unsigned char*)searchmem(1);
-    *maxlun=1;
-    controltrans(slot, 0b10100001, 0xfe, 0, id.iinterface, 1, (unsigned long long)maxlun, 1);
-    initphase=1;
-  }else{
-    cns->puts("maxlun=%d\n", *maxlun);
-  }
 }

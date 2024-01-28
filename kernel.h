@@ -171,14 +171,23 @@ class console{
     layer* l;
     int cx,cy;
 };
+class task{
+  public:
+    task(unsigned long long ep);
+    void run();
+    void sleep();
+    struct tc* ct;
+};
 class fifo{
   public:
-    fifo(int sz);
+    fifo(int sz, task* t=0);
     void write(unsigned long long d);
     unsigned long long read();
+    unsigned long long front(){return datas[rp];};
     unsigned long long* datas;
     int rp,wp;
     int len,size;
+    task* tsk;
 };
 class window{
   public:
@@ -236,6 +245,12 @@ namespace ps2{
 namespace timerd{
   void init();
   void sleep(unsigned int ms10);
+};
+namespace mtaskd{
+  void taskswitch(bool cc=false);
+  task* init();
+  extern timer* mt;
+  extern task* current;
 };
 extern "C"{
   void setcr3(unsigned long long*);

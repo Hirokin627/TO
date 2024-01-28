@@ -12,10 +12,9 @@ window* nowb;
 alignas(16) struct tc taska,taskb;
 void testt(){
   new window(600, 600);
+  mtaskd::current->sleep();
   while(1){
-    asm("cli");
-    switchcont(&taska, &taskb);
-    asm("sti");
+    asm("sti\nhlt");
   }
 }
 extern "C" void nKernelmain(struct arg* ai){
@@ -26,7 +25,6 @@ extern "C" void nKernelmain(struct arg* ai){
   scrysize=ai->Frame.ysize;
   memory_init(ai->mems, ai->size ,ai->bsize);
   layerd::init();
-  kernelbuf=new fifo(128);
   cns=new console(60, (scrysize)/16);
   x64_init();
   pci::init();
@@ -41,6 +39,8 @@ extern "C" void nKernelmain(struct arg* ai){
   *(unsigned int*)&taskb.fx_area[24]=0x1f80;
   taskb.rsp=searchmem(1024)+1024-8;
   timerd::init();
+  task* ta=mtaskd::init();
+  kernelbuf=new fifo(128, ta);
   for(int i=0;i<3;i++)cns->puts("test %d\n", i);
   cns->l->updown(-1);
   layer* l=new layer(16, 16);
@@ -83,16 +83,16 @@ extern "C" void nKernelmain(struct arg* ai){
   //graphic::drawbox(l, 0xffffff, 0, 0, 15, 15);
   l->updown(layerd::top+1);
   window* test=new window(200, 200);
-  timerd::sleep(100);
   xhci::init();
   window* mw;
   int mpx,mpy;
   unsigned char buf[256];
+  task* tb=new task((unsigned long long)testt);
+  tb->run();
   while(1){
     if(kernelbuf->len==0){
-      asm("cli");
-      //switchcont(&taskb, &taska);
-      asm("sti");
+      ta->sleep();
+      asm("sti\nhlt");
     }else{
       asm("cli");
       unsigned int q=kernelbuf->read();
@@ -143,6 +143,9 @@ extern "C" void nKernelmain(struct arg* ai){
         asm("sti");
         if(k==1){
           window* nw=new window(200, 200);
+        }else if(k==2){
+          task* nt=new task((unsigned long long)testt);
+          nt->run();
         }
       }else if(q==5){
         unsigned long long p=kernelbuf->read();

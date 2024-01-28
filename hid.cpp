@@ -165,9 +165,6 @@ void decoderd(hid* d, unsigned char* p, unsigned long long size){
 };
 using namespace hidd;
 #define reportlength 800
-unsigned char calcepaddr(unsigned char a){
-  return (a&3)*2+(a>>7);
-}
 void hid::init(unsigned char s){
   using namespace xhci;
   slot=s;

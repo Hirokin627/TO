@@ -475,4 +475,7 @@ namespace xhci{
     rr->ir[0].ip=1;
     cns->puts("USBSTS=%08x\n", ope->usbsts);
   }
+unsigned char calcepaddr(unsigned char a){
+  return (a&3)*2+(a>>7);
+}
 };

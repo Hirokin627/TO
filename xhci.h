@@ -451,6 +451,8 @@ class mass : public classd{
     void comp(struct transfertrb* t) override;
     int initphase;
     unsigned char* maxlun;
+    struct normalTRB* intrb;
+    unsigned int bulkin,bulkout;
 };
 namespace xhci{
   extern CR* tr[8][32];
@@ -459,4 +461,5 @@ namespace xhci{
   extern struct port* ports;
   void controltrans(unsigned char slot,unsigned char bmrequesttype, unsigned char brequest, unsigned short wvalue, unsigned short windex, unsigned short wlength, unsigned long long pointer, unsigned char dir);
   void resetport(unsigned char port);
+  unsigned char calcepaddr(unsigned char a);
 };
