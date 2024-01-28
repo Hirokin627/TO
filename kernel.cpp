@@ -13,9 +13,6 @@ alignas(16) struct tc taska,taskb;
 void testt(){
   new window(600, 600);
   mtaskd::current->sleep();
-  while(1){
-    asm("sti\nhlt");
-  }
 }
 extern "C" void nKernelmain(struct arg* ai){
   cli();
@@ -23,6 +20,7 @@ extern "C" void nKernelmain(struct arg* ai){
   vram=ai->Frame.fb;
   scrxsize=ai->Frame.xsize;
   scrysize=ai->Frame.ysize;
+  acpi::init((struct RSDP*)ai->acpi);
   memory_init(ai->mems, ai->size ,ai->bsize);
   layerd::init();
   cns=new console(60, (scrysize)/16);
@@ -42,7 +40,7 @@ extern "C" void nKernelmain(struct arg* ai){
   task* ta=mtaskd::init();
   kernelbuf=new fifo(128, ta);
   for(int i=0;i<3;i++)cns->puts("test %d\n", i);
-  cns->l->updown(-1);
+  //cns->l->updown(-1);
   layer* l=new layer(16, 16);
   l->col_inv=-1;
   static char cursor[16][17]={
@@ -100,7 +98,6 @@ extern "C" void nKernelmain(struct arg* ai){
         unsigned char c=kernelbuf->read();
         signed int x=kernelbuf->read();
         signed int y=kernelbuf->read();
-        asm("sti");
         if(c&1){
           if(mw){
             mpx+=x;
@@ -122,6 +119,9 @@ extern "C" void nKernelmain(struct arg* ai){
             nowb->cs->updown(layerd::top-1);
             nowb->setactive(true);
           }
+          if(mx==0&&my==0){
+            acpi::shutdown();
+          }
         }else{
           if(mw){
             mw->cs->slide(mw->cs->x+mpx, mw->cs->y+mpy);
@@ -135,6 +135,7 @@ extern "C" void nKernelmain(struct arg* ai){
         if(mx>scrxsize-1)mx=scrxsize-1;
         if(my>scrysize-1)my=scrysize-1;
         l->slide(mx, my);
+        asm("sti");
       }else if(q==1){
         asm("sti");
         xhci::posthandle();

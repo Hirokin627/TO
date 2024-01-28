@@ -252,6 +252,10 @@ namespace mtaskd{
   extern timer* mt;
   extern task* current;
 };
+namespace acpi{
+  void init(struct RSDP*);
+  void shutdown();
+};
 extern "C"{
   void setcr3(unsigned long long*);
   unsigned long long* getcr3();
@@ -261,6 +265,7 @@ extern "C"{
   void loadidt(short, struct IDT*);
   unsigned int io_in32(short);
   void io_out32(short, unsigned int);
+  void io_out16(unsigned short, unsigned short);
   unsigned int rflags();
   void srflags(unsigned int);
   void switchcont(struct tc*, struct tc*);

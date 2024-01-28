@@ -213,11 +213,11 @@ void hid::comp(struct transfertrb* t){
       controltrans(slot, 0b00100001, 11, 1, slots[slot].intn, 0, 0, 0);
     }else{
       if(!off){
+        asm("cli");
         int nmx=getdfornt(&buf[xoff], xsize)*scrxsize/xmax;
         int nmy=getdfornt(&buf[yoff], ysize)*scrysize/ymax;
         int px=nmx-mx;
         int py=nmy-my;
-        asm("cli");
         kernelbuf->write(0);
         kernelbuf->write(getdfornt(&buf[boff], bsize));
         kernelbuf->write((signed int)px);
