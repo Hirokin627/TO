@@ -23,8 +23,6 @@ void mass::init(unsigned char s){
     p+=p[0];
   }while(p[1]!=4);
   cns->puts("bulkin=%d\n", bulkin);
-  controltrans(slot, 0b00100001, 0xff, 0, id.iinterface, 0, 0, 0);
 }
 void mass::comp(struct transfertrb* t){
-  cns->puts("reset code=%d\n", t->code);
 }

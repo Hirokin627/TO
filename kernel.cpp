@@ -39,7 +39,7 @@ extern "C" void nKernelmain(struct arg* ai){
   timerd::init();
   task* ta=mtaskd::init();
   kernelbuf=new fifo(128, ta);
-  for(int i=0;i<3;i++)cns->puts("test %d\n", i);
+  xhci::init();
   //cns->l->updown(-1);
   layer* l=new layer(16, 16);
   l->col_inv=-1;
@@ -80,8 +80,7 @@ extern "C" void nKernelmain(struct arg* ai){
   }
   //graphic::drawbox(l, 0xffffff, 0, 0, 15, 15);
   l->updown(layerd::top+1);
-  window* test=new window(200, 200);
-  xhci::init();
+  //window* test=new window(200, 200);
   window* mw;
   int mpx,mpy;
   unsigned char buf[256];

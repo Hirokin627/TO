@@ -6,7 +6,7 @@ struct capreg{
   unsigned int hcsparams1;
   unsigned int hcsparams2;
   unsigned int hcsparams3;
-  unsigned int mccparams1;
+  unsigned int hccparams1;
   unsigned int dboff;
   unsigned int rtsoff;
   unsigned int hccparams2;
@@ -414,6 +414,7 @@ struct slot{
   enum devicetype type;
     struct configurationdescriptor ds;
     int ip;
+    struct inputc* icc;
 };
 class classd{
   public:

@@ -174,6 +174,7 @@ void hid::init(unsigned char s){
   nt->pointer=(unsigned long long)buf;
   nt->trbtransferlength=8;
   nt->ioc=1;
+  nt->isp=1;
   cns->puts("HID\n");
   cns->puts("sub=%d\n", id.binterfacesubclass);
   isr=id.binterfacesubclass^1;
