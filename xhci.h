@@ -450,14 +450,41 @@ class mass : public classd{
   public:
     void init(unsigned char s) override;
     void comp(struct transfertrb* t) override;
+    void read(unsigned char* buf, unsigned int cnt, unsigned int lba);
     int initphase;
     unsigned char* maxlun;
     struct normalTRB* intrb;
+    struct normalTRB* outtrb;
+    unsigned char* tb;
+    unsigned char* buf;
     unsigned int bulkin,bulkout;
+    unsigned int bpb;
 };
+struct CBW{
+  unsigned int sig;
+  unsigned int tag;
+  unsigned int transferlength;
+  unsigned char flags;
+  unsigned char lun:4;
+  unsigned char :4;
+  unsigned char cblength:5;
+  unsigned char :3;
+  unsigned char cb[16];
+  CBW(){
+    sig=0x43425355;
+  }
+}__attribute__((packed));
+struct CSW{
+  unsigned int sig;
+  unsigned int tag;
+  unsigned int residue;
+  unsigned char status;
+}__attribute__((packed));
 namespace xhci{
   extern CR* tr[8][32];
   extern unsigned int *db;
+  extern classd* drivers[256][50];
+  extern struct devc** dcbaa;
   extern struct slot* slots;
   extern struct port* ports;
   void controltrans(unsigned char slot,unsigned char bmrequesttype, unsigned char brequest, unsigned short wvalue, unsigned short windex, unsigned short wlength, unsigned long long pointer, unsigned char dir);

@@ -16,6 +16,11 @@ typedef enum {
  EfiPersistentMemory,
  EfiMaxMemoryType
 } EFI_MEMORY_TYPE;
+typedef struct {
+  unsigned char Type;
+  unsigned char SubType;
+  unsigned char Length[2];
+} EFI_DEVICE_PATH_PROTOCOL;
 #include "edk/bootpack.h"
 #include "edk/elf.hpp"
 #include <cstdint>
@@ -29,6 +34,7 @@ class fifo;
 class window;
 extern int* vram;
 extern int scrxsize,scrysize;
+extern unsigned char bdl;
 extern window* nowb;
 extern console* cns;
 extern fifo* kernelbuf;
@@ -206,6 +212,22 @@ class timer{
     timer* prev;
     unsigned int flags;
 };
+class drive{
+  public:
+    virtual void read(unsigned char* buf, unsigned int cnt, unsigned int lba512){
+    };
+    virtual void write(unsigned char* buf, unsigned int cnt, unsigned int lba512){
+    };
+    
+};
+class mass;
+class usbdrv : public drive{
+  public:
+    usbdrv(unsigned char slot, unsigned char interface);
+    void read(unsigned char* buf, unsigned int cnt, unsigned int lba512) override;
+    void write(unsigned char* buf, unsigned int cnt, unsigned int lba512) override;
+    mass* intf;
+};
 void memory_init(EFI_MEM* mems, unsigned long long dsize, unsigned long long bsize);
 void x64_init();
 unsigned long long getpaddr(unsigned long long* p4, unsigned long long vaddr);
@@ -238,6 +260,7 @@ namespace xhci{
   
   void posthandle();
   void init();
+  unsigned char getslot(unsigned char port);
 };
 namespace ps2{
   void init();
@@ -256,6 +279,11 @@ namespace acpi{
   void init(struct RSDP*);
   void shutdown();
 };
+namespace drvd{
+  void init(EFI_DEVICE_PATH_PROTOCOL* bdp);
+  unsigned char registdrv(unsigned char type, unsigned char mainaddr, unsigned char subaddr, drive* drv);
+  extern drive* drvs[256];
+};
 extern "C"{
   void setcr3(unsigned long long*);
   unsigned long long* getcr3();
@@ -269,4 +297,5 @@ extern "C"{
   unsigned int rflags();
   void srflags(unsigned int);
   void switchcont(struct tc*, struct tc*);
+  unsigned short io_in16(unsigned short);
 };

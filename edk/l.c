@@ -70,7 +70,7 @@ EFI_STATUS EFIAPI UefiMain(EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST){
 	UINTN s=mb*512;
 	VOID* v;
 	if(s>16*1024*1024)s=16*1024*1024;
-	Print(L"Strage size:%d", s);
+	Print(L"Strage size:%d\n", s);
 	EFI_STATUS sss=gBS->AllocatePool(EfiLoaderData, s, &v);
 	if(EFI_ERROR(sss)){
 	  Print(L"test %r\n", sss);
@@ -85,11 +85,17 @@ EFI_STATUS EFIAPI UefiMain(EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST){
 	file->Close(file);
 	root->Close(root);
 	struct arg ai;
-	while(test->Type!=0x7f&&test->SubType==1){
+	while(test->Type!=0x7f){
+	  Print(L"Device protocol id:%d %d\n", test->Type, test->SubType);
 	  if(test->Type==3){
-	    ai.isfromide=1;
-	    ai.dn=*(char*)((unsigned long long)test+5);
+	    if(test->SubType==5){
+	      Print(L"Device port : interface = %d : %d\n", *(unsigned char*)((unsigned long long)test+4), *(unsigned char*)((unsigned long long)test+5));
+	      for(int j=0;j<*(unsigned short*)test->Length;j++){
+	        *(unsigned char*)((unsigned long long)&ai.bd+j)=*(unsigned char*)((unsigned long long)test+j);
+	      }
+	    }
 	  }
+	  Print(L"Length=%d\n", *(unsigned short*)test->Length);
 	  test=(EFI_DEVICE_PATH_PROTOCOL*)((unsigned long long)test+*(unsigned short*)test->Length);
 	}
 	

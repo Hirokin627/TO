@@ -54,8 +54,7 @@ struct arg{
 	EFI_MEM* mems;
 	unsigned long long size;
 	unsigned long long bsize;
-	char isfromide;
-	char dn;
+	EFI_DEVICE_PATH_PROTOCOL bd;
 	void* volume;
 	void (*reset)(int, int, int, int);
 };

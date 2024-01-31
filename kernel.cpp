@@ -24,12 +24,18 @@ void testt(){
   new window(600, 600);
   mtaskd::current->sleep();
 }
+unsigned char dp[44];
+unsigned char bdl;
+EFI_DEVICE_PATH_PROTOCOL* bdpp=(EFI_DEVICE_PATH_PROTOCOL*)dp;
 extern "C" void nKernelmain(struct arg* ai){
   cli();
   asm("cli");
   vram=ai->Frame.fb;
   scrxsize=ai->Frame.xsize;
   scrysize=ai->Frame.ysize;
+  for(int i=0;i<*(unsigned short*)ai->bd.Length;i++){
+    dp[i]=*(unsigned char*)((unsigned long long)&ai->bd+i);
+  }
   acpi::init((struct RSDP*)ai->acpi);
   memory_init(ai->mems, ai->size ,ai->bsize);
   layerd::init();
@@ -50,6 +56,7 @@ extern "C" void nKernelmain(struct arg* ai){
   task* ta=mtaskd::init();
   kernelbuf=new fifo(128, ta);
   xhci::init();
+  drvd::init(bdpp);
   //cns->l->updown(-1);
   layer* l=new layer(16, 16);
   l->col_inv=-1;
@@ -95,11 +102,9 @@ extern "C" void nKernelmain(struct arg* ai){
   int mpx,mpy;
   unsigned char buf[256];
   task* tb=new task((unsigned long long)testt);
-  tb->run();
   unsigned char bk[256];
   while(1){
     if(kernelbuf->len==0){
-      ta->sleep();
       asm("sti\nhlt");
     }else{
       asm("cli");
@@ -161,6 +166,18 @@ extern "C" void nKernelmain(struct arg* ai){
           io_out8(0x64, 0xfe);
         }else if(k==3){
           acpi::shutdown();
+        }else if(k==4){
+          unsigned char* b=(unsigned char*)searchmem(512);
+          drvd::drvs[bdl]->read(b, 1, 0);
+          cns->puts("Result first byte:%s\n",b); 
+          freemem((unsigned long long)b);
+        }else if(k==5){
+          if(drvd::drvs['b']){
+            unsigned char* b=(unsigned char*)searchmem(512);
+            drvd::drvs['B']->read(b, 1, 0);
+            cns->puts("Result first byte:%s\n",b); 
+            freemem((unsigned long long)b);
+          }
         }
       }else if(q==5){
         unsigned long long p=kernelbuf->read();

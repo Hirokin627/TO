@@ -36,6 +36,9 @@ namespace xhci{
   struct RR* rr;
   char addrport=0;
   classd* drivers[256][50];
+  unsigned char getslot(unsigned char port){
+    return ports[port].slot;
+  }
   void clearbitportsc(unsigned char port, unsigned char b){
     unsigned int sc=ope->portset[port].portsc;
     sc&=~(1<<b);
@@ -237,14 +240,14 @@ namespace xhci{
     }else{
     }
     
-    if(trb->code==4){
+    /*if(trb->code==4){
       cns->puts("Error slot=%d code=%d\n", slot, trb->code);
       slots[slot].phase=waitreset;
       unsigned char port=slots[slot].port;
       ports[port].phase=waitreset;
       ports[slot].haveerr=1;
       resetport(port);
-    }
+    }*/
     if(trb->code!=1&&trb->code!=13){
       cns->puts("TRB Error detect:%d\n", trb->code);
     }
@@ -296,6 +299,7 @@ namespace xhci{
             }else if(i->binterfaceclass==8){
               drivers[slot][in]=new mass;
               drivers[slot][in]->id=*i;
+              drivers[slot][in]->fulld=(unsigned char*)i;
               supported=true;
             }else{
               drivers[slot][in]=new classd;
@@ -309,6 +313,7 @@ namespace xhci{
             icc->icc.aflags|=1<<dci;
             struct epc* epcont=&icc->epcont[dci-1];
             epcont->eptype=e->bmattributes&3;
+            epcont->maxpacketsize=e->wmaxpacketsize;
             epcont->eptype+=((e->bendpointaddress>>7)&1)*4;
             tr[slot][dci]=new CR;
             epcont->trdp=(unsigned long long)tr[slot][dci]->ring|1;
