@@ -179,10 +179,10 @@ extern "C" void nKernelmain(struct arg* ai){
             freemem((unsigned long long)b);
           }
         }else if(k==6){
-          unsigned char* buf=(unsigned char*)searchmem(512*0xc88);
-          drvd::drvs['A']->read(buf, 0xc88, 0);
-          cns->puts("writing\n");
-          drvd::drvs['B']->write(buf, 0xc88, 0);
+          struct BPB* bpb=(struct BPB*)searchmem(512);
+          drvd::drvs['A']->read((unsigned char*)bpb, 1, 0);
+          bpb->oem_name[0]='A';
+          drvd::drvs['A']->write((unsigned char*)bpb, 1, 0);
         }
       }else if(q==5){
         unsigned long long p=kernelbuf->read();
