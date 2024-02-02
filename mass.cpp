@@ -11,7 +11,6 @@ void mass::init(unsigned char s){
   cns->puts("sub class=%d protocol=%x\n", id.binterfacesubclass, id.binterfaceprotocol);
   unsigned char* p=fulld;
   p+=p[0];
-    cns->puts("DESC DUMP\n");
   do {
     if(p[0]==0)break;
     if(p[1]==5){
@@ -20,7 +19,6 @@ void mass::init(unsigned char s){
       ept+=(p[2]>>7)*4;
       if(ept==6)bulkin=ep;
       else if(ept==2)bulkout=ep;
-      cns->puts("ep dci=%d type=%d\n", ep, ept);
     }
     p+=p[0];
   }while(p[1]!=4);
@@ -30,7 +28,6 @@ void mass::init(unsigned char s){
   intrb=new struct normalTRB;
   intrb->trbtransferlength=13;
   intrb->ioc=intrb->isp=1;
-  cns->puts("bi=%d bo=%d\n", bulkin, bulkout);
   controltrans(slot, 0b00100001, 0xff, 0, id.binterfacenumber, 0, 0, 0);
 }
 void mass::comp(struct transfertrb* t){
@@ -41,6 +38,7 @@ void mass::comp(struct transfertrb* t){
   }else if(initphase==1){
     cns->puts("maxlun=%d\n",*maxlun);
     struct CBW* cbw=new struct CBW;
+    mycbw=cbw;
     cbw->tag=1;
     cbw->transferlength=8;
     cbw->lun=0;
@@ -80,7 +78,7 @@ void mass::comp(struct transfertrb* t){
   }else if(initphase==5){
     struct CBW* cbw=(struct CBW*)outtrb->pointer;
     struct normalTRB* nt=cbw->flags>>7? intrb : outtrb;
-    nt->trbtransferlength=bpb;
+    nt->trbtransferlength=bpb+13;
     nt->pointer=(unsigned long long)tb;
     unsigned int ep=cbw->flags>>7 ? bulkin : bulkout;
     tr[slot][ep]->push((struct TRB*)nt);
@@ -100,6 +98,7 @@ void mass::comp(struct transfertrb* t){
       db[slot]=bulkin;
     }else{
       freemem((unsigned long long)csw);
+      outtrb->pointer=(unsigned long long)mycbw;
       initphase=8;
     }
   }
@@ -120,6 +119,31 @@ void mass::read(unsigned char* buf, unsigned int cnt, unsigned int lba){
   cbw->flags=0x80;
   tr[slot][bulkout]->push((struct TRB*)outtrb);
   db[slot]=bulkout;
+  while(initphase!=8){
+    posthandle();
+    asm("sti\nhlt");
+  }
+}
+void mass::write(unsigned char* buf, unsigned int cnt, unsigned int lba){
+  initphase=5;
+  tb=buf;
+  struct CBW* cbw=mycbw;
+  cbw->cb[0]=0xaa;
+  for(int i=0;i<=0x18;i+=8){
+    cbw->cb[2+i/8]=lba>>(0x18-i);
+  }
+  for(int i=0;i<=0x18;i+=8){
+    cbw->cb[6+i/8]=cnt>>(0x18-i);
+  }
+  cbw->transferlength=13+bpb;
+  cbw->cblength=12;
+  cbw->flags=0;
+  tr[slot][bulkout]->push((struct TRB*)outtrb);
+  db[slot]=bulkout;
+  while(initphase!=8){
+    posthandle();
+    asm("sti\nhlt");
+  }
 }
 usbdrv::usbdrv(unsigned char slot, unsigned char interface){
   intf=(mass*)drivers[slot][interface];
@@ -127,22 +151,23 @@ usbdrv::usbdrv(unsigned char slot, unsigned char interface){
 void usbdrv::read(unsigned char* buf, unsigned int cnt, unsigned int lba){
   unsigned char tb[2048];
   for(int i=0;i<cnt;i++){
-    unsigned int tlba=lba/(intf->bpb/0x200);
-    unsigned int blba=lba%(intf->bpb/0x200);
+    unsigned int tlba=(lba+i)/(intf->bpb/0x200);
+    unsigned int blba=(lba+i)%(intf->bpb/0x200);
     intf->read(tb, 1, tlba);
-    while(intf->initphase!=8){
-      posthandle();
-      asm("sti\nhlt");
-    }
     for(int j=0;j<512;j++){
-      buf[j]=tb[blba*0x200+j];
+      buf[i*512+j]=tb[blba*0x200+j];
     }
   }
 }
 void usbdrv::write(unsigned char* buf, unsigned int cnt, unsigned int lba){
-  unsigned char* tb=(unsigned char*)searchmem(intf->bpb);
+  unsigned char tb[2048];
   for(int i=0;i<cnt;i++){
-    unsigned int tlba=lba/(intf->bpb/0x200);
+    unsigned int tlba=(lba+i)/(intf->bpb/0x200);
+    intf->read(tb, 1, tlba);
+    unsigned int blba=(lba+i)%(intf->bpb/0x200);
+    for(int j=0;j<512;j++){
+      tb[blba*512+j]=buf[i*512+j];
+    }
+    intf->write(tb, 1, tlba);
   }
-  freemem((unsigned long long)tb);
 }

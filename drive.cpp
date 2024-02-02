@@ -18,6 +18,7 @@ namespace drvd{
     for(int i='A';i<256;i++){
       if(drvs[i]==0){
         dl=i;
+        cns->puts("drvl=%c\n" ,dl);
         break;
       }
     }
@@ -25,7 +26,6 @@ namespace drvd{
       if(mainaddr==bdmainaddr){
         if(subaddr==bdsubaddr){
           bdl=dl;
-    cns->puts("drvl=%c\n" ,dl);
         }
       }
     }

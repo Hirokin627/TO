@@ -451,6 +451,8 @@ class mass : public classd{
     void init(unsigned char s) override;
     void comp(struct transfertrb* t) override;
     void read(unsigned char* buf, unsigned int cnt, unsigned int lba);
+    void write(unsigned char* buf, unsigned int cnt, unsigned int lba);
+    struct CBW* mycbw;
     int initphase;
     unsigned char* maxlun;
     struct normalTRB* intrb;

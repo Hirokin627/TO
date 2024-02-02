@@ -102,9 +102,12 @@ extern "C" void nKernelmain(struct arg* ai){
   int mpx,mpy;
   unsigned char buf[256];
   task* tb=new task((unsigned long long)testt);
+  tb->run();
   unsigned char bk[256];
   while(1){
     if(kernelbuf->len==0){
+      asm("sti");
+        xhci::posthandle();
       asm("sti\nhlt");
     }else{
       asm("cli");
@@ -153,7 +156,6 @@ extern "C" void nKernelmain(struct arg* ai){
         asm("sti");
       }else if(q==1){
         asm("sti");
-        xhci::posthandle();
       }else if(q==2){
         unsigned char k=kernelbuf->read();
         asm("sti");
@@ -167,17 +169,20 @@ extern "C" void nKernelmain(struct arg* ai){
         }else if(k==3){
           acpi::shutdown();
         }else if(k==4){
-          unsigned char* b=(unsigned char*)searchmem(512);
-          drvd::drvs[bdl]->read(b, 1, 0);
-          cns->puts("Result first byte:%s\n",b); 
-          freemem((unsigned long long)b);
+          fat* f=new fat();
+          f->init(drvd::drvs['A']);
         }else if(k==5){
-          if(drvd::drvs['b']){
+          if(drvd::drvs['B']){
             unsigned char* b=(unsigned char*)searchmem(512);
             drvd::drvs['B']->read(b, 1, 0);
             cns->puts("Result first byte:%s\n",b); 
             freemem((unsigned long long)b);
           }
+        }else if(k==6){
+          unsigned char* buf=(unsigned char*)searchmem(512*0xc88);
+          drvd::drvs['A']->read(buf, 0xc88, 0);
+          cns->puts("writing\n");
+          drvd::drvs['B']->write(buf, 0xc88, 0);
         }
       }else if(q==5){
         unsigned long long p=kernelbuf->read();

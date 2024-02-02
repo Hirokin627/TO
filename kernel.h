@@ -228,6 +228,18 @@ class usbdrv : public drive{
     void write(unsigned char* buf, unsigned int cnt, unsigned int lba512) override;
     mass* intf;
 };
+class fs{
+  public:
+};
+class fat : public fs{
+  public:
+    fat();
+    void init(drive*);
+    struct BPB* bpb;
+    drive* dv;
+    unsigned int rc;
+    unsigned int* fats;
+};
 void memory_init(EFI_MEM* mems, unsigned long long dsize, unsigned long long bsize);
 void x64_init();
 unsigned long long getpaddr(unsigned long long* p4, unsigned long long vaddr);
