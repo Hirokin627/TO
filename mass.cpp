@@ -78,7 +78,7 @@ void mass::comp(struct transfertrb* t){
   }else if(initphase==5){
     struct CBW* cbw=(struct CBW*)outtrb->pointer;
     struct normalTRB* nt=cbw->flags>>7? intrb : outtrb;
-    nt->trbtransferlength=bpb+13;
+    nt->trbtransferlength=bpb;
     nt->pointer=(unsigned long long)tb;
     unsigned int ep=cbw->flags>>7 ? bulkin : bulkout;
     tr[slot][ep]->push((struct TRB*)nt);
@@ -96,7 +96,11 @@ void mass::comp(struct transfertrb* t){
     if(csw->sig!=0x53425355){
       tr[slot][bulkin]->push((struct TRB*)intrb);
       db[slot]=bulkin;
+      cns->puts("Error\n");
     }else{
+      if(csw->status!=0){
+        cns->puts("Error code=%d cmd=%02x\n", csw->status, mycbw->cb[0]);
+      }
       freemem((unsigned long long)csw);
       outtrb->pointer=(unsigned long long)mycbw;
       initphase=8;
@@ -114,9 +118,10 @@ void mass::read(unsigned char* buf, unsigned int cnt, unsigned int lba){
   for(int i=0;i<=0x18;i+=8){
     cbw->cb[6+i/8]=cnt>>(0x18-i);
   }
-  cbw->transferlength=13+bpb;
+  cbw->transferlength=bpb;
   cbw->cblength=12;
   cbw->flags=0x80;
+  outtrb->trbtransferlength=31;
   tr[slot][bulkout]->push((struct TRB*)outtrb);
   db[slot]=bulkout;
   while(initphase!=8){
@@ -135,9 +140,10 @@ void mass::write(unsigned char* buf, unsigned int cnt, unsigned int lba){
   for(int i=0;i<=0x18;i+=8){
     cbw->cb[6+i/8]=cnt>>(0x18-i);
   }
-  cbw->transferlength=13+bpb;
+  cbw->transferlength=bpb;
   cbw->cblength=12;
   cbw->flags=0;
+  outtrb->trbtransferlength=31;
   tr[slot][bulkout]->push((struct TRB*)outtrb);
   db[slot]=bulkout;
   while(initphase!=8){

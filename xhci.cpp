@@ -552,6 +552,7 @@ namespace xhci{
     *(unsigned int*)&rr->ir[0]|=1;
     //cns->puts("USBSTS=%08x\n", ope->usbsts);
     //io_out8(0x64, 0xfe);
+    asm("int $0x2b");
   }
 unsigned char calcepaddr(unsigned char a){
   return (a&3)*2+(a>>7);

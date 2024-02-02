@@ -102,12 +102,11 @@ extern "C" void nKernelmain(struct arg* ai){
   int mpx,mpy;
   unsigned char buf[256];
   task* tb=new task((unsigned long long)testt);
-  tb->run();
+  //tb->run();
   unsigned char bk[256];
   while(1){
     if(kernelbuf->len==0){
       asm("sti");
-        xhci::posthandle();
       asm("sti\nhlt");
     }else{
       asm("cli");
@@ -156,6 +155,7 @@ extern "C" void nKernelmain(struct arg* ai){
         asm("sti");
       }else if(q==1){
         asm("sti");
+        xhci::posthandle();
       }else if(q==2){
         unsigned char k=kernelbuf->read();
         asm("sti");
@@ -171,6 +171,17 @@ extern "C" void nKernelmain(struct arg* ai){
         }else if(k==4){
           fat* f=new fat();
           f->init(drvd::drvs['A']);
+          struct fat_ent* d=f->getintdir(f->rc);
+          for(int i=0;d[i].name[0]!=0;i++){
+            if(d[i].attr!=0x0f){
+              for(int j=0;j<11;j++){
+                cns->puts("%c", d[i].name[j]);
+              }
+              cns->nline();
+            }
+          }
+          delete f;
+          freemem((unsigned long long)d);
         }else if(k==5){
           if(drvd::drvs['B']){
             unsigned char* b=(unsigned char*)searchmem(512);

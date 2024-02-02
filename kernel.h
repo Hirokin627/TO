@@ -234,7 +234,15 @@ class fs{
 class fat : public fs{
   public:
     fat();
+    ~fat();
     void init(drive*);
+    int calcclus(int clus);
+    struct fat_ent* getintdir(int clus);
+    int readfat(int ind);
+    void readclus(unsigned char* buf, int cnt, int clus);
+    void readcluschain(unsigned char* buf, int clus);
+    int getchainsize(int clus);
+    unsigned char* ff;
     struct BPB* bpb;
     drive* dv;
     unsigned int rc;
