@@ -81,8 +81,9 @@ readmsr:
 global writemsr
 writemsr:
 	mov ecx,edi
+	mov rax,0
 	mov eax,esi
-	wtmsr
+	wrmsr
 	ret
 global switchcont
 switchcont:
@@ -193,4 +194,14 @@ global srflags
 srflags:
 	push rdi
 	popfq
+	ret
+global getcr4
+getcr4:
+	mov rax,cr4
+	ret
+	
+global setcr4
+setcr4:
+	mov rax,rdi
+	mov cr4,rax
 	ret

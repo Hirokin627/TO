@@ -6,9 +6,7 @@ using namespace massd;
 void mass::init(unsigned char s){
   slot=s;
   initialized=1;
-  cns->puts("mass strage class\n");
   initphase=0;
-  cns->puts("sub class=%d protocol=%x\n", id.binterfacesubclass, id.binterfaceprotocol);
   unsigned char* p=fulld;
   p+=p[0];
   do {
@@ -28,17 +26,25 @@ void mass::init(unsigned char s){
   intrb=new struct normalTRB;
   intrb->trbtransferlength=13;
   intrb->ioc=intrb->isp=1;
+    struct CBW* cbw=new struct CBW;
+    mycbw=cbw;
+  //controltrans(slot, 0b10000000, 8, 0, 0, 1, searchmem(1), 1);
   controltrans(slot, 0b00100001, 0xff, 0, id.binterfacenumber, 0, 0, 0);
 }
 void mass::comp(struct transfertrb* t){
+  if(t->code!=1&&t->code!=13){
+    cns->puts("Trans error detect %d\n", t->code);
+    freemem((unsigned long long)maxlun);
+    initphase=0;
+    controltrans(slot, 0b00100001, 0xff, 0, id.binterfacenumber, 0, 0, 0);
+  }
   if(initphase==0){
   maxlun=(unsigned char*)searchmem(1);
     controltrans(slot, 0b10100001, 0xfe, 0, id.binterfacenumber, 1, (unsigned long long)maxlun, 1);
     initphase=1;
   }else if(initphase==1){
     cns->puts("maxlun=%d\n",*maxlun);
-    struct CBW* cbw=new struct CBW;
-    mycbw=cbw;
+    struct CBW* cbw=mycbw;
     cbw->tag=1;
     cbw->transferlength=8;
     cbw->lun=0;
@@ -73,7 +79,7 @@ void mass::comp(struct transfertrb* t){
     if(csw->sig!=0x53425355){
     tr[slot][bulkin]->push((struct TRB*)intrb);
     db[slot]=bulkin;
-    }
+    }else freemem((unsigned long long)csw);
     drvd::registdrv(5, slots[slot].port, id.binterfacenumber, new usbdrv(slot, id.binterfacenumber));
   }else if(initphase==5){
     struct CBW* cbw=(struct CBW*)outtrb->pointer;
@@ -124,10 +130,12 @@ void mass::read(unsigned char* buf, unsigned int cnt, unsigned int lba){
   outtrb->trbtransferlength=31;
   tr[slot][bulkout]->push((struct TRB*)outtrb);
   db[slot]=bulkout;
+  unsigned int r=rflags();
   while(initphase!=8){
     posthandle();
     asm("sti\nhlt");
   }
+  srflags(r);
 }
 void mass::write(unsigned char* buf, unsigned int cnt, unsigned int lba){
   initphase=5;
@@ -146,10 +154,12 @@ void mass::write(unsigned char* buf, unsigned int cnt, unsigned int lba){
   outtrb->trbtransferlength=31;
   tr[slot][bulkout]->push((struct TRB*)outtrb);
   db[slot]=bulkout;
+  unsigned int r=rflags();
   while(initphase!=8){
     posthandle();
     asm("sti\nhlt");
   }
+  srflags(r);
 }
 usbdrv::usbdrv(unsigned char slot, unsigned char interface){
   intf=(mass*)drivers[slot][interface];

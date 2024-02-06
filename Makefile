@@ -15,7 +15,7 @@ haribote.img: kernel.o $(BLD)
 	mkfs.fat -n 'HARIBOTEOS' -s 2 -f 2 -R 32 -F 32 haribote.img
 	sudo mkdir -p img
 	sudo mount haribote.img img
-	echo a > test.txt
+	echo HIRO IS GOOD > test.txt
 	sudo cp test.txt img/
 	rm -f test.txt
 	sudo mkdir -p img/efi/boot

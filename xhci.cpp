@@ -133,10 +133,10 @@ namespace xhci{
   void recievetrb(struct cctrb* trb){
     unsigned char slot=trb->slot;
     struct TRB* t=(struct TRB*)trb->ctrb;
-    //cns->puts("slot=%d code=%d type=%d\n", slot, trb->code, t->type);
+    //cns->puts("cmd=%d code=%d\n", t->type, trb->code);
     if(t->type==9){
       drivers[slot][0]=0;
-      //cns->puts("addrport=%d portsc=%08x\n", addrport, ope->portset[addrport].portsc);
+      cns->puts("addrport=%d portsc=%08x\n", addrport, ope->portset[addrport].portsc);
       slots[slot].port=addrport;
       ports[addrport].slot=slot;
       dcbaa[slot]=new struct devc;
@@ -163,6 +163,7 @@ namespace xhci{
       slots[slot].phase=addressingdevice;
       delete at;
     }else if(t->type==11){
+      cns->puts("ep0=%d\n", dcbaa[slot]->epcont[0].epstate);
       addrport=0;
       slots[slot].phase=getcdesc;
       //for(int i=0;i<100000000;i++);
@@ -198,6 +199,7 @@ namespace xhci{
         cr->push((struct TRB*)&dt);
         db[0]=0;
       }else{
+        cns->puts("setting conf\n");
         controltrans(slot, 0, 9, slots[slot].ds.bconfigurationvalue, 0, 0, 0, 0);
       }
     }else if(t->type==10){
@@ -245,10 +247,11 @@ namespace xhci{
       resetport(port);
     }*/
     if(trb->code!=1&&trb->code!=13){
-      //cns->puts("TRB Error detect:%d\n", trb->code);
+      cns->puts("TRB Error detect:%d\n", trb->code);
     }
     if(slots[slot].phase==getcdesc){
       if(trb->code==1||trb->code==13){
+        cns->puts("Arrived getc phase\n");
         struct dataTRB* tb=(struct dataTRB*)t;
         unsigned char* p=(unsigned char*)tb->pointer;
         unsigned char* lp=(unsigned char*)((unsigned long long)p+(0x100-trb->trbtransferlength));
@@ -340,6 +343,7 @@ namespace xhci{
       }
     }else if(slots[slot].phase==setconf){
       //cns->puts("starting ");
+        cns->puts("Arrived start class driver phase\n");
       slots[slot].phase=starting;;
       for(int i=0;i<50;i++){
         if(drivers[slot][i]!=0){
@@ -364,12 +368,16 @@ namespace xhci{
   }
   void posthandle(){
   //*(unsigned int*)0xfee000b0=0;
+  if(ope->usbcmd&0x1000){
+    cns->puts("xHC ERROR\n");
+    asm("cli\nhlt");
+  }
   struct TRB* erdp=(struct TRB*)(rr->ir[0].erdp&~0xf);
   while(erdp->c==c){
+    asm("cli");
     struct TRB t=*erdp;
     erdp++;
     eri++;
-    //cns->puts("eri=%d\n", eri);
    if(eri>=30){
       eri=0;
       erdp=(struct TRB*)erst->erba;
@@ -379,15 +387,19 @@ namespace xhci{
     switch(t.type){
       case 34:
         recievetrb((struct psctrb*)&t);
+        asm("sti");
         break;
       case 33:
         recievetrb((struct cctrb*)&t);
+        asm("sti");
         break;
       case 32:
         recievetrb((struct transfertrb*)&t);
+        asm("sti");
         break;
       default:
         //cns->puts("Unknown type:%d\n", t.type);
+        asm("sti");
         break;
     }
     *(unsigned int*)&rr->ir[0]|=1;
@@ -396,8 +408,8 @@ namespace xhci{
   __attribute__((interrupt)) void xhcihandle(int* esp){
     *(unsigned int*)&rr->ir[0]|=1;
     if(ope->usbsts&0x1000){
-      //cns->puts("xHCI Error found.\n");
-      //cns->l->updown(layerd::top+1);
+      cns->puts("xHCI Error found.\n");
+      cns->l->updown(layerd::top+1);
     }
     ope->usbsts|=8; 
     kernelbuf->write(1);
@@ -405,19 +417,12 @@ namespace xhci{
     io_out8(0x20, 0x62);
     io_out8(0xa0, 0x63);
   }
-  void pause(){
-    a:
-      while(!(io_in8(0x64)&1));
-      if(io_in8(0x60)&0x80)goto a;
-  }
   void init(){
-    asm("cli");
     for(int i=0;i<pci::many;i++){
       if(pci::readpcidata(pci::pcis[i], 8)>>8==0x0c0330){
         xhc=pci::pcis[i];
         xhcp=true;
         //pause();
-        if((pci::readpcidata(xhc, 0)&0xffff)==0x8086){
           unsigned int sp=pci::readpcidata(xhc, 0xdc);
           pci::writepcidata(xhc, 0xd8, sp);
           unsigned int ep=pci::readpcidata(xhc, 0xd4);
@@ -425,7 +430,6 @@ namespace xhci{
           //cns->puts("vendor: %04x\n", pci::readpcidata(xhc, 0)&0xffff);
         //pause();
           break;
-        }
       }
     }
     if(!xhcp)return;
@@ -437,6 +441,7 @@ namespace xhci{
       }
     }
     set_idt(0x2b, (unsigned long long)xhcihandle, 8, 0x8e);
+    open_irq(11);
     //cns->puts("XHCI found\n");
     msip=false;
         //pause();
@@ -465,13 +470,13 @@ namespace xhci{
       for(int i=0;i<4;i++)pci::writepcidata(xhc, p+i*4, mr.data[i]);
     }else{
     }
-    open_irq(11);
     //cns->puts("using irq=%x\n", pci::readpcidata(xhc, 0x3c));
         //pause();
     unsigned long long mmio=pci::readpcidata(xhc, 0x10)&~0xf;
     mmio|=(unsigned long long)pci::readpcidata(xhc, 0x14)<<32;
     creg=(struct capreg*)mmio;
     db=(unsigned int*)(mmio+creg->dboff);
+    cns->puts("db base=%p\n", db);
     rr=(struct RR*)(mmio+creg->rtsoff);
     ope=(struct opr*)(mmio+creg->caplength);
     //cns->puts("hcc=%x\n", creg->hccparams1);
@@ -482,18 +487,28 @@ namespace xhci{
     cp+=mmio;
     //cns->puts("cap base=%0llx\n", cp);
     if(cp>mmio){
-      unsigned char* p=(unsigned char*)cp;
-      do {
-        //cns->puts("cap id=%d\n", p[0]);
-        if(p[0]==1){
-          unsigned int* usblegsup=(unsigned int*)(p);
-          if(!(*usblegsup&(1<<24))){
-            *usblegsup|=1<<24;
-            while((*usblegsup&(1<<16))||!(*usblegsup&(1<<24)));
-          }
+      unsigned int* p=(unsigned int*)cp;
+      unsigned int next;
+      do{
+        unsigned int cr=*p;
+        cns->puts("id=%d next=%d cr=%x\n", *p&0xff, (*p>>8)&0xff, cr);
+        if((cr&0xff)==1){
+          cns->puts("LEGSUP found at %x\n", p);
+          unsigned int legsup=cr;
+          legsup&=1<<16;
+          legsup|=1<<24;
+          *p=legsup;
+          while(legsup&(1<<16))legsup=*p;
+          while(!(legsup&(1<<24)))legsup=*p;
         }
-        p+=(unsigned short)p[1]<<2;
-      }while(p[1]);
+        next=*p;
+        next>>=8;
+        next&=0xff;
+        next<<=2;
+        
+        cns->puts("calcing next:%x\n", next);
+        p=(unsigned int*)((unsigned long long)p+(((*p>>8)&0xff)<<2));
+      }while(next);
     }
     ope->usbcmd|=2;
     while(ope->usbcmd&2);
@@ -505,7 +520,7 @@ namespace xhci{
     maxbuf<<=4;
     maxbuf|=creg->hcsparams2>>27;
     maxbuf=64;
-    //cns->puts("Max scratch buf=%x\n", maxbuf);
+    cns->puts("Max scratch buf=%x\n", maxbuf);
         //pause();
     if(maxbuf>0){
       unsigned long long* bufa=(unsigned long long*)searchmem(8*maxbuf);
@@ -521,8 +536,8 @@ namespace xhci{
     //cns->puts("MAx ports=%d\n", maxports);
         //pause();
     if(ope->usbsts&0x1000){
-      //cns->puts("xHCI Error found.\n");
-      //cns->l->updown(layerd::top+1);
+      cns->puts("xHCI Error found.\n");
+      cns->l->updown(layerd::top+1);
     }
     if(maxports==0)return;
     ports=(struct port*)searchmem(sizeof(struct port)*maxports);
@@ -537,7 +552,6 @@ namespace xhci{
     *(unsigned int *)&rr->ir[0].interval=4000; 
     *(unsigned int*)&rr->ir[0]|=3;
     ope->usbcmd|=4;
-    asm("sti");
     ope->usbcmd|=1;
     while(ope->usbsts&1);
     for(int i=1;i<=maxports;i++){

@@ -38,26 +38,28 @@ extern "C" void nKernelmain(struct arg* ai){
   }
   acpi::init((struct RSDP*)ai->acpi);
   memory_init(ai->mems, ai->size ,ai->bsize);
+  unsigned int ia32=readmsr(0xc0000080);
+  ia32=0x500;
+  writemsr(0xc0000080, ia32);
+  x64_init();
   layerd::init();
   cns=new console(60, (scrysize)/16);
-  x64_init();
   pci::init();
   pic_init();
   asm("sti");
+  cns->puts("MSR=%x\n", readmsr(0xc0000080));
+  kernelbuf=new fifo(128);
   ps2::init();
-  taskb.cr3=(unsigned long long)getcr3();
+  /*taskb.cr3=(unsigned long long)getcr3();
   taskb.rip=(unsigned long long)testt;
   taskb.cs=8;
   taskb.ss=0x10;
   taskb.rflags=0x202;
   *(unsigned int*)&taskb.fx_area[24]=0x1f80;
   taskb.rsp=searchmem(1024)+1024-8;
-  timerd::init();
-  task* ta=mtaskd::init();
-  kernelbuf=new fifo(128, ta);
-  xhci::init();
-  drvd::init(bdpp);
+  task* ta=mtaskd::init();*/
   //cns->l->updown(-1);
+  timerd::init();
   layer* l=new layer(16, 16);
   l->col_inv=-1;
   static char cursor[16][17]={
@@ -97,17 +99,19 @@ extern "C" void nKernelmain(struct arg* ai){
   }
   //graphic::drawbox(l, 0xffffff, 0, 0, 15, 15);
   l->updown(layerd::top+1);
+  xhci::init();
+  drvd::init(bdpp);
   //window* test=new window(200, 200);
   window* mw;
   int mpx,mpy;
-  unsigned char buf[256];
-  task* tb=new task((unsigned long long)testt);
-  //tb->run();
+  /*task* tb=new task((unsigned long long)testt);
+  tb->run();*/
   unsigned char bk[256];
   while(1){
     if(kernelbuf->len==0){
       asm("sti");
-      asm("sti\nhlt");
+        xhci::posthandle();
+      //asm("sti\nhlt");
     }else{
       asm("cli");
       unsigned int q=kernelbuf->read();
@@ -136,9 +140,6 @@ extern "C" void nKernelmain(struct arg* ai){
             nowb->cs->updown(layerd::top-1);
             nowb->setactive(true);
           }
-          if(mx==0&&my==0){
-            acpi::shutdown();
-          }
         }else{
           if(mw){
             mw->cs->slide(mw->cs->x+mpx, mw->cs->y+mpy);
@@ -152,36 +153,28 @@ extern "C" void nKernelmain(struct arg* ai){
         if(mx>scrxsize-1)mx=scrxsize-1;
         if(my>scrysize-1)my=scrysize-1;
         l->slide(mx, my);
-        asm("sti");
       }else if(q==1){
         asm("sti");
-        xhci::posthandle();
       }else if(q==2){
         unsigned char k=kernelbuf->read();
         asm("sti");
         if(k==1){
           window* nw=new window(200, 200);
         }else if(k==2){
-          task* nt=new task((unsigned long long)testt);
-          nt->run();
+          /*task* nt=new task((unsigned long long)testt);
+          nt->run();*/
         }else if(k==0x1c){
           io_out8(0x64, 0xfe);
         }else if(k==3){
           acpi::shutdown();
         }else if(k==4){
-          fat* f=new fat();
-          f->init(drvd::drvs['A']);
-          struct fat_ent* d=f->getintdir(f->rc);
-          for(int i=0;d[i].name[0]!=0;i++){
-            if(d[i].attr!=0x0f){
-              for(int j=0;j<11;j++){
-                cns->puts("%c", d[i].name[j]);
-              }
-              cns->nline();
-            }
+          if(drvd::drvs['A']){
+            fat* f=new fat();
+            f->init(drvd::drvs['A']);
+            file* fl=f->getf("test.txt", f->rc);
+            cns->puts("first b:%02x\n", fl->base[0]);
+            delete f;
           }
-          delete f;
-          freemem((unsigned long long)d);
         }else if(k==5){
           if(drvd::drvs['B']){
             unsigned char* b=(unsigned char*)searchmem(512);
@@ -189,15 +182,16 @@ extern "C" void nKernelmain(struct arg* ai){
             cns->puts("Result first byte:%s\n",b); 
             freemem((unsigned long long)b);
           }
-        }else if(k==6){
+        }else if(k==6&&drvd::drvs['A']){
           struct BPB* bpb=(struct BPB*)searchmem(512);
           drvd::drvs['A']->read((unsigned char*)bpb, 1, 0);
           bpb->oem_name[0]='A';
           drvd::drvs['A']->write((unsigned char*)bpb, 1, 0);
+          freemem((unsigned long long)bpb);
         }
       }else if(q==5){
+        asm("cli");
         unsigned long long p=kernelbuf->read();
-        p|=(unsigned long long)kernelbuf->read()<<32;
         unsigned char* k=(unsigned char*)p;
         unsigned char pk[256];
         unsigned char nk[256];
@@ -213,12 +207,10 @@ extern "C" void nKernelmain(struct arg* ai){
           if(nk[i]){
             kernelbuf->write(2);
             kernelbuf->write(usbcode[i]);
-            cns->puts("pushed key:%02x\n", i);
           }
           if(pk[i]==0&&bk[i]==1){
             kernelbuf->write(2);
             kernelbuf->write(usbcode[i]|0x80);
-            cns->puts("unpushed key:%02x\n", i);
           }
         }
         for(int i=0;i<256;i++){

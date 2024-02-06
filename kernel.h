@@ -230,6 +230,9 @@ class usbdrv : public drive{
 };
 class fs{
   public:
+    virtual file* getf(const char* n, int dn){
+      return 0;
+    };
 };
 class fat : public fs{
   public:
@@ -241,7 +244,9 @@ class fat : public fs{
     int readfat(int ind);
     void readclus(unsigned char* buf, int cnt, int clus);
     void readcluschain(unsigned char* buf, int clus);
+    struct fat_ent* search_intent(const char* name, int dir);
     int getchainsize(int clus);
+    file* getf(const char* n, int dir) override;
     unsigned char* ff;
     struct BPB* bpb;
     drive* dv;
@@ -314,8 +319,12 @@ extern "C"{
   unsigned int io_in32(short);
   void io_out32(short, unsigned int);
   void io_out16(unsigned short, unsigned short);
+  unsigned int readmsr(unsigned int id);
   unsigned int rflags();
   void srflags(unsigned int);
   void switchcont(struct tc*, struct tc*);
   unsigned short io_in16(unsigned short);
+  unsigned long long getcr4();
+  void setcr4(unsigned long long data);
+  void writemsr(unsigned int id, unsigned int data);
 };

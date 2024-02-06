@@ -37,10 +37,10 @@ void decoderd(hid* d, unsigned char* p, unsigned long long size){
   unsigned int rs=0;
   while(lp>p){
       if(gete(p)==0xc0){
-        cns->puts("collec end\n");
+        //cns->puts("collec end\n");
         cc--;
       }else if(gete(p)==4){
-        cns->puts("Usage Page(%x)\n", getd(p));
+        //cns->puts("Usage Page(%x)\n", getd(p));
         unsigned char pg=getd(p);
         p+=p[0]&3;
         p++;
@@ -49,15 +49,15 @@ void decoderd(hid* d, unsigned char* p, unsigned long long size){
         unsigned int cnt=0;
         while(gete(p)!=0x80&&gete(p)!=0x90){
           if(gete(p)==0x14){
-            cns->puts("log min(%x)\n", getd(p));
+            //cns->puts("log min(%x)\n", getd(p));
             lmin=getd(p);
           }else if(gete(p)==0x24){
-            cns->puts("log max(%x)\n", getd(p));
+            //cns->puts("log max(%x)\n", getd(p));
             lmax=getd(p);
           }else if(gete(p)==8){
-            cns->puts("Usage (%x)\n", getd(p));
+            //cns->puts("Usage (%x)\n", getd(p));
             if(getd(p)==2){
-              cns->puts("This is MOUSE(TRUE!!!!!!!!)\n");
+              //cns->puts("This is MOUSE(TRUE!!!!!!!!)\n");
               slots[slot].type=USBRMouse;
               break;
             }else if(getd(p)==1)break;
@@ -66,16 +66,16 @@ void decoderd(hid* d, unsigned char* p, unsigned long long size){
               break;
             }else u->write(getd(p));
           }else if(gete(p)==0x74){
-            cns->puts("Report size(%x)\n", getd(p));
+            //cns->puts("Report size(%x)\n", getd(p));
             rs=getd(p);
           }else if(gete(p)==0x94){
-            cns->puts("Report count(%x)\n", getd(p));
+            //cns->puts("Report count(%x)\n", getd(p));
             cnt=getd(p);
           }
           p+=p[0]&3;
           p++;
         }
-        cns->puts("Input or Output\n");
+        //cns->puts("Input or Output\n");
         int mu=u->len;
         if(pg==9){
           d->boff=bo;
@@ -90,15 +90,15 @@ void decoderd(hid* d, unsigned char* p, unsigned long long size){
               d->xsize=rs;
               d->xmax=lmax;
               d->xmin=lmin;
-              cns->puts("x addr bit=%d byte=%d\n", bp, bo);
-              cns->puts("Value attr:%02x\n", getd(p)); 
+              //cns->puts("x addr bit=%d byte=%d\n", bp, bo);
+              //cns->puts("Value attr:%02x\n", getd(p)); 
               d->off=getd(p)==6;
             }else if(ui==0x31){
               d->yoff=bo;
               d->ysize=rs;
               d->ymax=lmax;
               d->xmin=lmin;
-              cns->puts("y addr bit=%d byte=%d\n", bp, bo);
+              //cns->puts("y addr bit=%d byte=%d\n", bp, bo);
             }
             plus(&bo, &bp, rs);
           }
@@ -109,7 +109,7 @@ void decoderd(hid* d, unsigned char* p, unsigned long long size){
             d->kaoff=bo;
             d->kasize=cnt;
           }
-          cns->puts("rs=%d cnt=%d\n", rs, cnt);
+          //cns->puts("rs=%d cnt=%d\n", rs, cnt);
           plus(&bo, &bp, rs*cnt);
         }else{
           plus(&bo, &bp, rs*cnt);
@@ -118,7 +118,7 @@ void decoderd(hid* d, unsigned char* p, unsigned long long size){
       }else if(gete(p)==0x94||gete(p)==0x74){
         int cnt=0;
         int btsize=rs;
-        cns->puts("Pedding\n");
+        //cns->puts("Pedding\n");
         while(gete(p)!=0x80){
           if(gete(p)==0x94){
             cnt=getd(p);
@@ -128,12 +128,12 @@ void decoderd(hid* d, unsigned char* p, unsigned long long size){
           p+=p[0]&3;
           p++;
         }
-        cns->puts("Size: cnt=%d btsize=%d\n", cnt, btsize);
+        //cns->puts("Size: cnt=%d btsize=%d\n", cnt, btsize);
         plus(&bo, &bp, cnt*btsize);
       }
       if(gete(p)==8){
         uint8_t t=getd(p);
-        cns->puts("type(guess): %02x\n", t);
+        //cns->puts("type(guess): %02x\n", t);
         if(t==2){
           slots[slot].type=USBRMouse;
         }else{
@@ -160,7 +160,7 @@ void decoderd(hid* d, unsigned char* p, unsigned long long size){
       resetport(port);
     }
   }
-  cns->puts("Total report length:%d (bo=%d bp=%d)\n", bo, bo-1, bp);
+  //cns->puts("Total report length:%d (bo=%d bp=%d)\n", bo, bo-1, bp);
 }
 };
 using namespace hidd;
@@ -175,21 +175,21 @@ void hid::init(unsigned char s){
   nt->trbtransferlength=8;
   nt->ioc=1;
   nt->isp=1;
-  cns->puts("HID\n");
-  cns->puts("sub=%d\n", id.binterfacesubclass);
+  //cns->puts("HID\n");
+  //cns->puts("sub=%d\n", id.binterfacesubclass);
   isr=id.binterfacesubclass^1;
   unsigned char* p=fulld;
   do {
     if(p[0]==0)break;   
     if(p[1]==4){
       slots[slot].intn=p[2];
-      cns->puts("protocol=%d\n", p[7]);
+      //cns->puts("protocol=%d\n", p[7]);
     }
     if(p[1]==5){
       if(p[2]&0x80){
         unsigned char t=p[3]&3;
         t+=(p[2]>>7)*4;;
-        cns->puts("ep type=%d addr=%d\n", t, calcepaddr(p[2]));
+        //cns->puts("ep type=%d addr=%d\n", t, calcepaddr(p[2]));
         if(t==7){
           intin=calcepaddr(p[2]);
         }
@@ -197,7 +197,7 @@ void hid::init(unsigned char s){
     }
     p+=p[0];
   }while(p[1]!=4);
-  cns->puts("intn=%d indci=%d isr=%d\n", slots[slot].intn, intin, isr);
+  //cns->puts("intn=%d indci=%d isr=%d\n", slots[slot].intn, intin, isr);
   if(isr)controltrans(slot, 0b10000001, 6, 0x2200, slots[slot].intn, reportlength, searchmem(reportlength), 1);
   else
     controltrans(slot, 0b00100001, 11, 0, slots[slot].intn, 0, 0, 0);
@@ -250,7 +250,6 @@ void hid::comp(struct transfertrb* t){
       asm("cli");
       kernelbuf->write(5);
       kernelbuf->write((unsigned long long)buf);
-      kernelbuf->write(0);
       asm("sti");
       tr[slot][intin]->push((struct TRB*)nt);
       db[slot]=intin;

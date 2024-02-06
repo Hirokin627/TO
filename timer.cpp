@@ -4,7 +4,7 @@ namespace timerd{
   timer* front;
   __attribute__((interrupt)) void timerhandle(unsigned long long* rsp){
     count++;
-    timer* t=front;
+    /*timer* t=front;
     bool mtc=false;
     while(t){
       if(count>=t->timeout){
@@ -20,9 +20,10 @@ namespace timerd{
         if(t==mtaskd::mt)mtc=true;
       }
       t=t->next;
-    }
+    }*/
+    vram[count]=0;
     io_out8(0x20, 0x60);
-    if(mtc)mtaskd::taskswitch();
+    //if(mtc)mtaskd::taskswitch();
   }
   void init(){
     io_out8(0x43, 0x34);
