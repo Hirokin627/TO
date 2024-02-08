@@ -25,6 +25,7 @@ void fat::readclus(unsigned char* buf, int cnt, int clus){
 int fat::readfat(int ind){
   if(ff[ind/0x80]==0){
     dv->read((unsigned char*)&fats[ind&~0x7f], 1, bpb->reserved_sector_count+(ind/0x80));
+    ff[ind/0x80]=1;
   }
   return fats[ind];
 }

@@ -1,10 +1,47 @@
 #include "xhci.h"
+// USBメモリドライバ
+/*
+ 基本的な概念
+ 　　 用語説明
+ 　　       ブロック・・・USBメモリでのデータの単位。初期化時に取得される。
+ 　　   xHCI・・・平たく言えばUSBデバイスとの仲介役
+ 　　 　エンドポイント・・・USBデバイスとの論理的な通信路。通信の処理はxHCIドライバー担当。
+ 　　   デフォルト・コントロール・パイプ・・・どのUSBデバイスにも存在するエンドポイント。主に初期化に使用する。
+ 　　 　Bulk outエンドポイント　大容量の転送ができるPCからの一方通行のエンドポイント。何番かは調べなきゃわからない
+ 　　 　Bulk in エンドポイント　Bulk out エンドポイントの通信方向がUSBデバイスから担っただけ。
+ 　　 関数説明
+ 　　  cns->puts ・・・画面に文字を出力させる。
+ 　　  controltrans ・・・デフォルト・コントロール・パイプを通して通信を行う。
+ 　　  tr[なんとか][なんとか]->push ・・・説明が難しいので例え話でいうと、xHCIに要求の留守電を入れる。といった感じだろうか。db[slot]=ほにゃららでxHCIに通知する。通信が完了するとmass::compが呼ばれる。controltransも一緒
+ 　　 searchmem・・・指定したサイズのメモリーを確保し、先頭アドレスを返す。
+ 　　 freemem・・・指定したメモリーを開放する。
+ 　　 posthandle・・・xHCIドライバーに保留中の処理を実行させる。ちなみにmass::compはこの関数によって呼ばれる。
+ 　　USBメモリとの通信の大体の手順
+ 　　　1.CBWと呼ばれる要求やその情報などをまとめた構造体をBulk out エンドポイントから転送する　長さは必ず31バイトでなければならない
+ 　　　2.転送する必要があるデータを通信方向に応じて転送する
+ 　　　3.CSWと呼ばれる要求の結果などが記された構造体をBulk in エンドポイントから受けとる
+ 　　　　(CBWやCSWの具体的な構造はxhci.hのstruct CBW とstruct CSW参照
+ 　　ドライバーの挙動
+ 　　　1.USBメモリとの通信の「準備が終わると、init()が呼ばれる。
+ 　　　2.xHCIドライバから渡された情報をもとにBulk in、Bulk outの番号を特定する　情報はfulldを先頭にしている。
+ 　　　3.USBメモリが対応しているものだと「無理やり」仮定して、リセットを行わせる。(contorltrans(slot, 0b00100001, 0xff ...のところ）
+ 　　　4.目的はないけどLUN(これはなんなのかわかんない。）を取得。このドライバーではつかわない。
+ 　　　5.メディアの容量や１ブロックあたりのバイト数を取得。
+ 　参考情報
+ 　　　制作OS・・・Ubuntu 23(仮想マシン　ホストOS:Windows10 64Bit)
+ 　　　デバッグ環境と動かしたときの状況: 以下の４つ
+ 　　　　Virtualbox: USBデバイスを認識するが、時々エラー終了したり、USBデバイスとの通信がエラーで終了する。
+ 　　　　QEMU: USBデバイスを認識し、USBデバイスとの通信やその他エラーを吐かない
+ 　　　　VMWare: USBデバイスを認識するが、リセット以降デバイスからの応答がない
+ 　　　　実機(NEC製): USBデバイスを認識するようだが、どこかで応答を停止している。現在調査中。
+ 　以上詳しい説明は関数に記載されています。
+*/
 namespace massd{
 };
 using namespace xhci;
 using namespace massd;
 void mass::init(unsigned char s){
-  slot=s;
+  slot=s; //slot=xHCIによって割り当てられた識別番号
   initialized=1;
   initphase=0;
   unsigned char* p=fulld;
@@ -29,21 +66,46 @@ void mass::init(unsigned char s){
     struct CBW* cbw=new struct CBW;
     mycbw=cbw;
   //controltrans(slot, 0b10000000, 8, 0, 0, 1, searchmem(1), 1);
-  controltrans(slot, 0b00100001, 0xff, 0, id.binterfacenumber, 0, 0, 0);
+    controltrans(slot, 0b00100001, 0xff, 0, id.binterfacenumber, 0, 0, 0); //リセットを仕掛ける
 }
 void mass::comp(struct transfertrb* t){
-  if(t->code!=1&&t->code!=13){
-    cns->puts("Trans error detect %d\n", t->code);
-    freemem((unsigned long long)maxlun);
-    initphase=0;
-    controltrans(slot, 0b00100001, 0xff, 0, id.binterfacenumber, 0, 0, 0);
+  if(t){
+    if(t->code==6){ //エラーが発見された
+    /*freemem((unsigned long long)maxlun);
+      initphase=-1;
+      intrb->pointer=(unsigned long long)new struct CSW;
+      intrb->trbtransferlength=13;
+    tr[slot][bulkin]->push((struct TRB*)intrb);
+    db[slot]=bulkin;*/
+    resetep(slot, bulkin);
+    initphase=997;
+    return;
+    }
   }
-  if(initphase==0){
+  if(initphase==999){
+  //controltrans(slot, 1, 11, 0, id.binterfacenumber, 0, 0, 0);
+    controltrans(slot, 2, 1, 0, bulkout>>1, 0, 0, 0);
+    cns->puts("reset comp bulkin=%d\n", dcbaa[slot]->epcont[bulkin-1].epstate);
+    initphase=998;
+  }else if(initphase==998){
+    controltrans(slot, 2, 1, 0, bulkin>>1, 0, 0, 0);
+    initphase=996;
+  }else if(initphase==997){
+    //controltrans(slot, 0b00100001, 0xff, 0, id.binterfacenumber, 0, 0, 0);
+    cns->puts("bulkin state=%d\n", dcbaa[slot]->epcont[bulkin-1].epstate);
+    controltrans(slot, 2, 1, 0, bulkin>>1, 0, 0, 0);
+    initphase=999;
+  }else if(initphase==996){
+    intrb->pointer=searchmem(13);
+    intrb->trbtransferlength=13;
+    initphase=995;
+  }else if(initphase==995){
+    cns->puts("code=%d\n", t->code);
+  }else if(initphase==0){
   maxlun=(unsigned char*)searchmem(1);
     controltrans(slot, 0b10100001, 0xfe, 0, id.binterfacenumber, 1, (unsigned long long)maxlun, 1);
     initphase=1;
   }else if(initphase==1){
-    cns->puts("maxlun=%d\n",*maxlun);
     struct CBW* cbw=mycbw;
     cbw->tag=1;
     cbw->transferlength=8;
@@ -62,14 +124,10 @@ void mass::comp(struct transfertrb* t){
     db[slot]=bulkin;
     initphase=3;
   }else if(initphase==3){
-    for(int i=0;i<8;i++)cns->puts("%02x ", *(unsigned char*)(intrb->pointer+i));
-    cns->nline();
     for(int i=0;i<4;i++){
       bpb|=*(unsigned char*)(intrb->pointer+i+4)<<((3-i)*8);
     }
-    cns->puts("bpb=%x\n", bpb);
     intrb->pointer=searchmem(sizeof(struct CSW));
-    cns->puts("CSW=%p\n", intrb->pointer);
     intrb->trbtransferlength=13;
     tr[slot][bulkin]->push((struct TRB*)intrb);
     db[slot]=bulkin;
@@ -81,8 +139,9 @@ void mass::comp(struct transfertrb* t){
     db[slot]=bulkin;
     }else freemem((unsigned long long)csw);
     drvd::registdrv(5, slots[slot].port, id.binterfacenumber, new usbdrv(slot, id.binterfacenumber));
+    initphase=8;
   }else if(initphase==5){
-    struct CBW* cbw=(struct CBW*)outtrb->pointer;
+    struct CBW* cbw=(struct CBW*)mycbw;
     struct normalTRB* nt=cbw->flags>>7? intrb : outtrb;
     nt->trbtransferlength=bpb;
     nt->pointer=(unsigned long long)tb;
@@ -104,6 +163,7 @@ void mass::comp(struct transfertrb* t){
       db[slot]=bulkin;
       cns->puts("Error\n");
     }else{
+      asm("cli");
       if(csw->status!=0){
         cns->puts("Error code=%d cmd=%02x\n", csw->status, mycbw->cb[0]);
       }
@@ -114,9 +174,10 @@ void mass::comp(struct transfertrb* t){
   }
 }
 void mass::read(unsigned char* buf, unsigned int cnt, unsigned int lba){
+  while(initphase!=8)asm("sti");
   initphase=5;
   tb=buf;
-  struct CBW* cbw=(struct CBW*)outtrb->pointer;
+  struct CBW* cbw=mycbw;
   cbw->cb[0]=0xa8;
   for(int i=0;i<=0x18;i+=8){
     cbw->cb[2+i/8]=lba>>(0x18-i);
@@ -128,6 +189,7 @@ void mass::read(unsigned char* buf, unsigned int cnt, unsigned int lba){
   cbw->cblength=12;
   cbw->flags=0x80;
   outtrb->trbtransferlength=31;
+  outtrb->pointer=(unsigned long long)mycbw;
   tr[slot][bulkout]->push((struct TRB*)outtrb);
   db[slot]=bulkout;
   unsigned int r=rflags();
@@ -138,6 +200,7 @@ void mass::read(unsigned char* buf, unsigned int cnt, unsigned int lba){
   srflags(r);
 }
 void mass::write(unsigned char* buf, unsigned int cnt, unsigned int lba){
+  while(initphase!=8)asm("sti");
   initphase=5;
   tb=buf;
   struct CBW* cbw=mycbw;
@@ -168,6 +231,7 @@ void usbdrv::read(unsigned char* buf, unsigned int cnt, unsigned int lba){
   unsigned char tb[2048];
   for(int i=0;i<cnt;i++){
     unsigned int tlba=(lba+i)/(intf->bpb/0x200);
+    //cns->puts("tlba=%x\n", tlba);
     unsigned int blba=(lba+i)%(intf->bpb/0x200);
     intf->read(tb, 1, tlba);
     for(int j=0;j<512;j++){

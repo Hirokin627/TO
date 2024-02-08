@@ -313,6 +313,19 @@ struct statusTRB{
     target=0;
   }
 }__attribute__((packed));
+struct reseteptrb{
+  unsigned int rsv[3];
+  unsigned char c:1;
+  unsigned int :8;
+  unsigned int tsp:1;
+  unsigned int type:6;
+  unsigned int ep:5;
+  unsigned int :3;
+  unsigned int slot:8;
+  reseteptrb(){
+    type=14;
+  }
+}__attribute__((packed));
 struct transfertrb{
   unsigned long long pointer;
   unsigned int trbtransferlength:24;
@@ -425,6 +438,7 @@ class classd{
     }
     char initialized;
     unsigned char* fulld;
+    unsigned char reset;
     struct interfacedescriptor id;
     unsigned char slot;
     unsigned int reportlength;
@@ -489,6 +503,7 @@ namespace xhci{
   extern struct devc** dcbaa;
   extern struct slot* slots;
   extern struct port* ports;
+  void resetep(unsigned int slot, unsigned int ep);
   void controltrans(unsigned char slot,unsigned char bmrequesttype, unsigned char brequest, unsigned short wvalue, unsigned short windex, unsigned short wlength, unsigned long long pointer, unsigned char dir);
   void resetport(unsigned char port);
   unsigned char calcepaddr(unsigned char a);

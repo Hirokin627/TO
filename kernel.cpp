@@ -99,11 +99,11 @@ extern "C" void nKernelmain(struct arg* ai){
   }
   //graphic::drawbox(l, 0xffffff, 0, 0, 15, 15);
   l->updown(layerd::top+1);
-  xhci::init();
   drvd::init(bdpp);
   //window* test=new window(200, 200);
   window* mw;
   int mpx,mpy;
+  xhci::init();
   /*task* tb=new task((unsigned long long)testt);
   tb->run();*/
   unsigned char bk[256];
@@ -171,7 +171,7 @@ extern "C" void nKernelmain(struct arg* ai){
           if(drvd::drvs['A']){
             fat* f=new fat();
             f->init(drvd::drvs['A']);
-            file* fl=f->getf("test.txt", f->rc);
+            file* fl=f->getf("haribote.sys", f->rc);
             cns->puts("first b:%02x\n", fl->base[0]);
             delete f;
           }
