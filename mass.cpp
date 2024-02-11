@@ -77,19 +77,21 @@ void mass::comp(struct transfertrb* t){
       intrb->trbtransferlength=13;
     tr[slot][bulkin]->push((struct TRB*)intrb);
     db[slot]=bulkin;*/
-    resetep(slot, bulkin);
-    initphase=997;
+    //controltrans(slot, 0b01000001, 0xff, 0, id.binterfacenumber, 0, 0, 0);
+    controltrans(slot, 2, 1, 0, bulkin>>1, 0, 0, 0);
+    initphase=999;
     return;
     }
   }
   if(initphase==999){
   //controltrans(slot, 1, 11, 0, id.binterfacenumber, 0, 0, 0);
-    controltrans(slot, 2, 1, 0, bulkout>>1, 0, 0, 0);
     cns->puts("reset comp bulkin=%d\n", dcbaa[slot]->epcont[bulkin-1].epstate);
-    initphase=998;
+    if(dcbaa[slot]->epcont[bulkout-1].epstate!=1)controltrans(slot, 2, 1, 0, bulkout>>1, 0, 0, 0);
+    else controltrans(slot, 0b10100001, 0xfe, 0, id.binterfacenumber, 1, (unsigned long long)maxlun, 1);
+    initphase=996;
   }else if(initphase==998){
     controltrans(slot, 2, 1, 0, bulkin>>1, 0, 0, 0);
-    initphase=996;
+    initphase=999;
   }else if(initphase==997){
     //controltrans(slot, 0b00100001, 0xff, 0, id.binterfacenumber, 0, 0, 0);
     cns->puts("bulkin state=%d\n", dcbaa[slot]->epcont[bulkin-1].epstate);
@@ -100,7 +102,7 @@ void mass::comp(struct transfertrb* t){
     intrb->trbtransferlength=13;
     initphase=995;
   }else if(initphase==995){
-    cns->puts("code=%d\n", t->code);
+    cns->puts("code=%d bulkstate=%d\n", t->code, dcbaa[slot]->epcont[bulkin-1].epstate);
   }else if(initphase==0){
   maxlun=(unsigned char*)searchmem(1);
     controltrans(slot, 0b10100001, 0xfe, 0, id.binterfacenumber, 1, (unsigned long long)maxlun, 1);
@@ -138,7 +140,7 @@ void mass::comp(struct transfertrb* t){
     tr[slot][bulkin]->push((struct TRB*)intrb);
     db[slot]=bulkin;
     }else freemem((unsigned long long)csw);
-    drvd::registdrv(5, slots[slot].port, id.binterfacenumber, new usbdrv(slot, id.binterfacenumber));
+    drvd::drvs[drvd::registdrv(5, slots[slot].port, id.binterfacenumber, new usbdrv(slot, id.binterfacenumber))]->bpb=bpb;;
     initphase=8;
   }else if(initphase==5){
     struct CBW* cbw=(struct CBW*)mycbw;
@@ -159,9 +161,10 @@ void mass::comp(struct transfertrb* t){
   }else if(initphase==7){
     struct CSW* csw=(struct CSW*)intrb->pointer;
     if(csw->sig!=0x53425355){
-      tr[slot][bulkin]->push((struct TRB*)intrb);
-      db[slot]=bulkin;
-      cns->puts("Error\n");
+      controltrans(slot, 0b00100001, 0xff, 0, id.binterfacenumber, 0, 0, 0);
+      initphase=9;
+      //tr[slot][bulkin]->push((struct TRB*)intrb);
+      //db[slot]=bulkin;
     }else{
       asm("cli");
       if(csw->status!=0){
@@ -171,6 +174,19 @@ void mass::comp(struct transfertrb* t){
       outtrb->pointer=(unsigned long long)mycbw;
       initphase=8;
     }
+  }else if(initphase==9){
+    initphase=10;
+    controltrans(slot, 2, 1, 0, bulkin>>1, 0, 0, 0);
+  }else if(initphase==10){
+    if((bulkin>>1)!=(bulkout>>1))controltrans(slot, 2, 1, 0, bulkout>>1, 0, 0, 0);
+    else controltrans(slot, 0b10100001, 0xfe, 0, id.binterfacenumber, 1, (unsigned long long)maxlun, 1);
+    initphase=11;
+  }else if(initphase==11){
+    outtrb->pointer=(unsigned long long)mycbw;
+    outtrb->trbtransferlength=31;
+    tr[slot][bulkout]->push((struct TRB*)outtrb);
+    db[slot]=bulkout;
+    initphase=5;
   }
 }
 void mass::read(unsigned char* buf, unsigned int cnt, unsigned int lba){
@@ -214,6 +230,7 @@ void mass::write(unsigned char* buf, unsigned int cnt, unsigned int lba){
   cbw->transferlength=bpb;
   cbw->cblength=12;
   cbw->flags=0;
+  cbw->lun=0;
   outtrb->trbtransferlength=31;
   tr[slot][bulkout]->push((struct TRB*)outtrb);
   db[slot]=bulkout;

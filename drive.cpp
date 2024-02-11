@@ -18,7 +18,7 @@ namespace drvd{
     for(int i='A';i<256;i++){
       if(drvs[i]==0){
         dl=i;
-        cns->puts("drvl=%c\n" ,dl);
+        //cns->puts("drvl=%c\n" ,dl);
         break;
       }
     }

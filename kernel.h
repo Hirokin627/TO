@@ -212,13 +212,15 @@ class timer{
     timer* prev;
     unsigned int flags;
 };
+class fs;
 class drive{
   public:
     virtual void read(unsigned char* buf, unsigned int cnt, unsigned int lba512){
     };
     virtual void write(unsigned char* buf, unsigned int cnt, unsigned int lba512){
     };
-    
+    unsigned int bpb;
+    fs* files;
 };
 class mass;
 class usbdrv : public drive{
@@ -308,6 +310,9 @@ namespace drvd{
   void init(EFI_DEVICE_PATH_PROTOCOL* bdp);
   unsigned char registdrv(unsigned char type, unsigned char mainaddr, unsigned char subaddr, drive* drv);
   extern drive* drvs[256];
+};
+namespace fsd{
+  void recognizefs(unsigned char d);
 };
 extern "C"{
   void setcr3(unsigned long long*);

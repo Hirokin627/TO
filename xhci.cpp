@@ -161,7 +161,10 @@ namespace xhci{
       //ic->scc.routestring=0;
       ic->scc.roothubportnumber=addrport;
       ic->scc.contextentries=1;
-      ic->scc.speed=(ope->portset[addrport].portsc>>10)&0xf;
+      unsigned int portsc=ope->portset[addrport].portsc;
+      portsc>>=10;
+      portsc&=0xf;
+      ic->scc.speed=portsc;
       struct epc* epcont=&ic->epcont[0];
       tr[slot][0]=new CR;
       epcont->eptype=4;
@@ -173,9 +176,9 @@ namespace xhci{
       at->slot=slot;
       at->bsr=0;
       cr->push((struct TRB*)at);
+      slots[slot].phase=addressingdevice;
       db[0]=0;
       //cns->puts("db=%016x\n", db);
-      slots[slot].phase=addressingdevice;
       delete at;
     }else if(t->type==11){
       //cns->puts("ep0=%d\n", dcbaa[slot]->epcont[0].epstate);
@@ -270,7 +273,7 @@ namespace xhci{
     if(di==-1){
       struct setupTRB* tb=(struct setupTRB*)t;
       tb--;
-      cns->puts("setup type=%d\n", tb->type);
+      //cns->puts("setup type=%d\n", tb->type);
       di=tb->windex;
       if(tb->brequest==1){
         di=0;

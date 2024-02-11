@@ -109,9 +109,8 @@ extern "C" void nKernelmain(struct arg* ai){
   unsigned char bk[256];
   while(1){
     if(kernelbuf->len==0){
-      asm("sti");
-        xhci::posthandle();
-      //asm("sti\nhlt");
+      //asm("sti");
+      asm("sti\nhlt");
     }else{
       asm("cli");
       unsigned int q=kernelbuf->read();
@@ -155,6 +154,7 @@ extern "C" void nKernelmain(struct arg* ai){
         l->slide(mx, my);
       }else if(q==1){
         asm("sti");
+        xhci::posthandle();
       }else if(q==2){
         unsigned char k=kernelbuf->read();
         asm("sti");

@@ -109,4 +109,10 @@ file* fat::getf(const char* n, int dir){
 namespace fsd{
   void init(){
   }
+  void recognizefs(unsigned char d){
+    drive* drv=drvd::drvs[d];
+    unsigned char* fs=(unsigned char*)searchmem(drv->bpb);
+    drv->read(fs, 1, 0);
+    freemem((unsigned long long)fs);
+  }
 };
