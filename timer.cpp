@@ -4,7 +4,7 @@ namespace timerd{
   timer* front;
   __attribute__((interrupt)) void timerhandle(unsigned long long* rsp){
     count++;
-    /*timer* t=front;
+    timer* t=front;
     bool mtc=false;
     while(t){
       if(count>=t->timeout){
@@ -20,8 +20,7 @@ namespace timerd{
         if(t==mtaskd::mt)mtc=true;
       }
       t=t->next;
-    }*/
-    vram[count]=0;
+    }
     io_out8(0x20, 0x60);
     //if(mtc)mtaskd::taskswitch();
   }
@@ -34,10 +33,12 @@ namespace timerd{
     front=0;
   }
   void sleep(unsigned int ms10){
+    unsigned int r=rflags();
     timer* t=new timer;
     t->set(ms10);
     while(!(t->flags&1))asm("sti");
     delete t;
+    srflags(r);
   }
 };
 using namespace timerd;

@@ -5,16 +5,16 @@ unsigned long long gdt[]={
   0x00cf92000000ffff
 };
 struct IDT* idt;
-unsigned long long* op4;
-unsigned long long* opd;
-unsigned long long* ope;
+alignas(4096) unsigned long long op4[512];
+alignas(4096) unsigned long long opd[64*512];
+alignas(4096) unsigned long long ope[512*512];
 void x64_init(){
   loadgdt(sizeof(gdt)-1, gdt);
   idt=(struct IDT*)searchmem(sizeof(struct IDT)*256);
   loadidt(sizeof(struct IDT)*256-1, idt);
-  op4=(unsigned long long*)searchmem(4096);
-  opd=(unsigned long long*)searchmem(8*64);
-  ope=(unsigned long long*)searchmem(8*512*64);
+  //op4=(unsigned long long*)searchmem(4096);
+  //opd=(unsigned long long*)searchmem(8*64);
+  //ope=(unsigned long long*)searchmem(8*512*64);
   op4[0]=(unsigned long long)&opd[0]|3;
   for(unsigned long long i=0;i<64;i++){
     opd[i]=(unsigned long long)&ope[i*512]|3;

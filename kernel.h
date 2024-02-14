@@ -235,12 +235,15 @@ class fs{
     virtual file* getf(const char* n, int dn){
       return 0;
     };
+    virtual void init(drive* d){
+      
+    };
 };
 class fat : public fs{
   public:
     fat();
     ~fat();
-    void init(drive*);
+    void init(drive*) override;
     int calcclus(int clus);
     struct fat_ent* getintdir(int clus);
     int readfat(int ind);
@@ -313,6 +316,7 @@ namespace drvd{
 };
 namespace fsd{
   void recognizefs(unsigned char d);
+  void init();
 };
 extern "C"{
   void setcr3(unsigned long long*);

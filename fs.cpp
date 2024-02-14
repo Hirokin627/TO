@@ -46,6 +46,30 @@ struct fat_ent* fat::search_intent(const char* name, int dir){
   struct fat_ent* d=getintdir(dir);
   for(int i=0;d[i].name[0]!=0;i++){
     if(d[i].attr==0x0f){
+      char n[256];
+      struct fat_lent* ld=(struct fat_lent*)&d[i];
+      int j=0;
+      while(1){
+        int ord=ld[j].ord&0x1f;
+        ord--;
+        for(int k=0;k<5;k++)
+          n[ord*13+k]=ld[j].name[k*2];
+        for(int k=0;k<6;k++)
+          n[ord*13+5+k]=ld[j].name2[k*2];
+        for(int k=0;k<2;k++)
+          n[ord*13+11+k]=ld[j].name3[k*2];
+        if(!strcmp((const char*)n, name)){
+          struct fat_ent* e=new struct fat_ent;
+          *e=d[i+(ld->ord&0x1f)];
+          freemem((unsigned long long)d);
+          return e;
+        }
+        if(ord==0){
+          break;
+        }
+        j++;
+      }
+      i+=ld->ord&0x1f;
     }else if(d[i].attr!=8&&canuse11){
       char n[13];
       for(int j=0;j<13;j++)n[j]=0;
@@ -106,13 +130,29 @@ file* fat::getf(const char* n, int dir){
   return f;
   
 }
+struct filefs{
+  file* f;
+  fs* files;
+  char name[256];
+};
 namespace fsd{
+  struct filefs* ffs;
   void init(){
+    ffs=(struct filefs*)searchmem(sizeof(struct filefs)*256);
   }
   void recognizefs(unsigned char d){
     drive* drv=drvd::drvs[d];
-    unsigned char* fs=(unsigned char*)searchmem(drv->bpb);
-    drv->read(fs, 1, 0);
-    freemem((unsigned long long)fs);
+    unsigned char* fsb=(unsigned char*)searchmem(drv->bpb);
+    drv->read(fsb, 1, 0);
+    if(!strncmp((const char*)&fsb[0x52], "FAT32", 5)){
+      drv->files=new fat;
+      drv->files->init(drv);
+    }
+    freemem((unsigned long long)fsb);
   }
 };
+file* fopen(const char name){
+  char n[256];
+  fs* files;
+  return 0;
+}

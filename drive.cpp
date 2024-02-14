@@ -30,6 +30,7 @@ namespace drvd{
       }
     }
     drvs[dl]=drv;
+    fsd::recognizefs(dl);
     return dl;
   }
 };

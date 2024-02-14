@@ -422,7 +422,8 @@ namespace xhci{
   }
   void posthandle(){
   //*(unsigned int*)0xfee000b0=0;
-  if(ope->usbcmd&0x1000){
+  unsigned int usbcmd=ope->usbsts;
+  if(usbcmd&0x1000){
     //cns->puts("xHC ERROR\n");
     asm("cli\nhlt");
   }

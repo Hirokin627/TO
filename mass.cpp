@@ -140,8 +140,17 @@ void mass::comp(struct transfertrb* t){
     tr[slot][bulkin]->push((struct TRB*)intrb);
     db[slot]=bulkin;
     }else freemem((unsigned long long)csw);
-    drvd::drvs[drvd::registdrv(5, slots[slot].port, id.binterfacenumber, new usbdrv(slot, id.binterfacenumber))]->bpb=bpb;;
     initphase=8;
+    drive* drv=new usbdrv(slot, id.binterfacenumber);
+    drv->bpb=bpb;;
+    //unsigned char dl=drvd::registdrv(5, slots[slot].port, id.binterfacenumber, drv);
+    asm("cli");
+    kernelbuf->write(6);
+    kernelbuf->write(5);
+    kernelbuf->write(slots[slot].port);
+    kernelbuf->write(id.binterfacenumber);
+    kernelbuf->write((unsigned long long)drv);
+    cns->puts("end\n");
   }else if(initphase==5){
     struct CBW* cbw=(struct CBW*)mycbw;
     struct normalTRB* nt=cbw->flags>>7? intrb : outtrb;
@@ -190,7 +199,11 @@ void mass::comp(struct transfertrb* t){
   }
 }
 void mass::read(unsigned char* buf, unsigned int cnt, unsigned int lba){
-  while(initphase!=8)asm("sti");
+  unsigned int r=rflags();
+  while(initphase!=8){
+    asm("sti\nhlt");
+  }
+  srflags(r);
   initphase=5;
   tb=buf;
   struct CBW* cbw=mycbw;
@@ -208,10 +221,9 @@ void mass::read(unsigned char* buf, unsigned int cnt, unsigned int lba){
   outtrb->pointer=(unsigned long long)mycbw;
   tr[slot][bulkout]->push((struct TRB*)outtrb);
   db[slot]=bulkout;
-  unsigned int r=rflags();
   while(initphase!=8){
     posthandle();
-    asm("sti\nhlt");
+    asm("sti");
   }
   srflags(r);
 }

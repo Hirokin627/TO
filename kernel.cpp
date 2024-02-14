@@ -99,6 +99,7 @@ extern "C" void nKernelmain(struct arg* ai){
   }
   //graphic::drawbox(l, 0xffffff, 0, 0, 15, 15);
   l->updown(layerd::top+1);
+  fsd::init();
   drvd::init(bdpp);
   //window* test=new window(200, 200);
   window* mw;
@@ -153,8 +154,8 @@ extern "C" void nKernelmain(struct arg* ai){
         if(my>scrysize-1)my=scrysize-1;
         l->slide(mx, my);
       }else if(q==1){
-        asm("sti");
         xhci::posthandle();
+        asm("sti");
       }else if(q==2){
         unsigned char k=kernelbuf->read();
         asm("sti");
@@ -169,11 +170,10 @@ extern "C" void nKernelmain(struct arg* ai){
           acpi::shutdown();
         }else if(k==4){
           if(drvd::drvs['A']){
-            fat* f=new fat();
-            f->init(drvd::drvs['A']);
+            fat* f=(fat*)drvd::drvs['A']->files;
+            //f->init(drvd::drvs['A']);
             file* fl=f->getf("haribote.sys", f->rc);
             cns->puts("first b:%02x\n", fl->base[0]);
-            delete f;
           }
         }else if(k==5){
           if(drvd::drvs['B']){
@@ -187,6 +187,11 @@ extern "C" void nKernelmain(struct arg* ai){
           drvd::drvs['A']->read((unsigned char*)bpb, 1, 0);
           bpb->oem_name[0]='A';
           drvd::drvs['A']->write((unsigned char*)bpb, 1, 0);
+          freemem((unsigned long long)bpb);
+        }else if(k==7&&drvd::drvs['B']&&drvd::drvs['A']){
+          struct BPB* bpb=(struct BPB*)searchmem(512);
+          drvd::drvs['A']->read((unsigned char*)bpb, 1, 0);
+          drvd::drvs['B']->write((unsigned char*)bpb, 1, 0);
           freemem((unsigned long long)bpb);
         }
       }else if(q==5){
@@ -216,6 +221,13 @@ extern "C" void nKernelmain(struct arg* ai){
         for(int i=0;i<256;i++){
           bk[i]=pk[i];
         }
+      }else if(q==6){
+        unsigned int type=kernelbuf->read();
+        unsigned int mainaddr=kernelbuf->read();
+        unsigned int subaddr=kernelbuf->read();
+        drive* drv=(drive*)kernelbuf->read();
+        asm("sti");
+        drvd::registdrv(type, mainaddr, subaddr, drv);
       }
     }
   }
