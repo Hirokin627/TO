@@ -29,7 +29,7 @@ namespace timerd{
     io_out8(0x40, 0x9c);
     io_out8(0x40, 0x2e);
     set_idt(0x20, (unsigned long long)timerhandle, 8, 0x8e);
-    open_irq(0);
+    //open_irq(0);
     front=0;
   }
   void sleep(unsigned int ms10){

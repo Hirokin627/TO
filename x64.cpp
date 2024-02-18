@@ -8,6 +8,20 @@ struct IDT* idt;
 alignas(4096) unsigned long long op4[512];
 alignas(4096) unsigned long long opd[64*512];
 alignas(4096) unsigned long long ope[512*512];
+struct iframe{
+  unsigned long long rip;
+}__attribute__((packed));
+__attribute__((interrupt)) void GPhandle(iframe* f, unsigned long long ec){
+  asm("cli\nhlt");
+}
+void set_idt(int n, unsigned long long offset, short sel, unsigned char attr){
+  idt[n].o_l=offset&0xffff;
+  idt[n].sel=sel;
+  idt[n].attr=attr;
+  idt[n].o_m=(offset>>16)&0xffff;
+  idt[n].o_h=(offset>>32);
+  idt[n].rsv=0;
+}
 void x64_init(){
   loadgdt(sizeof(gdt)-1, gdt);
   idt=(struct IDT*)searchmem(sizeof(struct IDT)*256);
@@ -23,6 +37,7 @@ void x64_init(){
     }
   }
   setcr3(op4);
+  set_idt(0x08, (unsigned long long)GPhandle, 8, 0x8e);
 }
 void allocpagesub(unsigned long long* p4, addr_t vaddr, addr_t paddr, char flags){
   unsigned int p4p=(vaddr>>39)&0x1ff;
@@ -92,12 +107,4 @@ void allocpage(unsigned long long* p4, addr_t vaddr, addr_t paddr, size_t size, 
   for(size_t i=0;i<(size+0xfff);i+=0x1000){
     allocpagesub(p4, vaddr+i, paddr+i, flags);
   }
-}
-void set_idt(int n, unsigned long long offset, short sel, unsigned char attr){
-  idt[n].o_l=offset&0xffff;
-  idt[n].sel=sel;
-  idt[n].attr=attr;
-  idt[n].o_m=(offset>>16)&0xffff;
-  idt[n].o_h=(offset>>32);
-  idt[n].rsv=0;
 }

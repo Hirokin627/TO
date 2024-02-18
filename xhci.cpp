@@ -414,7 +414,7 @@ namespace xhci{
       }
       asm("cli");
       drivers[slot][di]->comp(trb);
-      asm("sti");
+      //asm("sti");
       for(int i=1;i<=maxports;i++){
         if(ports[i].phase==waitfree)resetport(i);
       }
@@ -442,11 +442,11 @@ namespace xhci{
     switch(t.type){
       case 34:
         recievetrb((struct psctrb*)&t);
-        asm("sti");
+        //asm("sti");
         break;
       case 33:
         recievetrb((struct cctrb*)&t);
-        asm("sti");
+        //asm("sti");
         break;
       case 32:
         recievetrb((struct transfertrb*)&t);
@@ -454,7 +454,7 @@ namespace xhci{
         break;
       default:
         //cns->puts("Unknown type:%d\n", t.type);
-        asm("sti");
+        //asm("sti");
         break;
     }
     *(unsigned int*)&rr->ir[0]|=1;

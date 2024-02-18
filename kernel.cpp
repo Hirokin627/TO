@@ -21,8 +21,12 @@ const char usbcode[256]={
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 };
 void testt(){
+  asm("cli");
   new window(600, 600);
-  mtaskd::current->sleep();
+  while(1){
+    asm("sti");
+    switchcont(&taska, &taskb);
+  }
 }
 unsigned char dp[44];
 unsigned char bdl;
@@ -50,14 +54,14 @@ extern "C" void nKernelmain(struct arg* ai){
   cns->puts("MSR=%x\n", readmsr(0xc0000080));
   kernelbuf=new fifo(128);
   ps2::init();
-  /*taskb.cr3=(unsigned long long)getcr3();
+  taskb.cr3=(unsigned long long)getcr3();
   taskb.rip=(unsigned long long)testt;
   taskb.cs=8;
   taskb.ss=0x10;
   taskb.rflags=0x202;
   *(unsigned int*)&taskb.fx_area[24]=0x1f80;
   taskb.rsp=searchmem(1024)+1024-8;
-  task* ta=mtaskd::init();*/
+  /*task* ta=mtaskd::init();*/
   //cns->l->updown(-1);
   timerd::init();
   layer* l=new layer(16, 16);
@@ -109,11 +113,12 @@ extern "C" void nKernelmain(struct arg* ai){
   tb->run();*/
   unsigned char bk[256];
   while(1){
+    asm("cli");
     if(kernelbuf->len==0){
+      asm("sti");
+      switchcont(&taskb, &taska);
       //asm("sti");
-      asm("sti\nhlt");
     }else{
-      asm("cli");
       unsigned int q=kernelbuf->read();
       if(q==0){
         unsigned char c=kernelbuf->read();
@@ -169,8 +174,8 @@ extern "C" void nKernelmain(struct arg* ai){
         }else if(k==3){
           acpi::shutdown();
         }else if(k==4){
-          if(drvd::drvs['A']){
-            fat* f=(fat*)drvd::drvs['A']->files;
+          if(drvd::drvs[bdl]){
+            fat* f=(fat*)drvd::drvs[bdl]->files;
             //f->init(drvd::drvs['A']);
             file* fl=f->getf("haribote.sys", f->rc);
             cns->puts("first b:%02x\n", fl->base[0]);
