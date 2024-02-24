@@ -518,8 +518,12 @@ namespace xhci{
       mr.reg.control|=1;
       mr.reg.control&=~0x70;
       mr.reg.control|=0;
+      unsigned int bsp=*(unsigned int*)0xfee00020;
+      bsp>>=24;
+      cns->puts("BSP ID=%d\n", bsp);
       //cns->puts(" 64bit addr:%x\n", (mr.reg.control>>7)&0x1);
       mr.reg.address=0xfee00000;
+      mr.reg.address|=bsp<<12;
       mr.reg.uaddr=0;
       mr.reg.data=0xc02b;
       for(int i=0;i<4;i++)pci::writepcidata(xhc, p+i*4, mr.data[i]);

@@ -116,7 +116,7 @@ extern "C" void nKernelmain(struct arg* ai){
     asm("cli");
     if(kernelbuf->len==0){
       asm("sti");
-      switchcont(&taskb, &taska);
+      //switchcont(&taskb, &taska);
       //asm("sti");
     }else{
       unsigned int q=kernelbuf->read();
