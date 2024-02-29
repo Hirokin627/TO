@@ -13,8 +13,6 @@ void window::setactive(bool ac){
   graphic::drawbox(tb, c, 0, 0, tb->bxsize-1, tb->bysize-1);
 }
 window::window(int cxsize, int cysize){
-  unsigned int r=rflags();
-  asm("cli");
   cs=new layer(cxsize, cysize);
   cs->col_inv=-1;
   cs->flags|=ITS_WINDOW|ITS_CS;
@@ -53,5 +51,4 @@ window::window(int cxsize, int cysize){
   }
   nowb=this;
   cs->updown(layerd::top-1);
-  srflags(r);
 }

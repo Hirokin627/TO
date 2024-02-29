@@ -134,8 +134,6 @@ void layer::refreshconfro(int x0, int y0, int x1, int y1){
   refreshsub(x+x0, y+y0, x+x1, y+y1);
 }
 void layer::slide(int nx, int ny){
-  unsigned int r=rflags();
-  asm("cli");
   if(master){
     nx+=master->x;
     ny+=master->y;
@@ -149,5 +147,4 @@ void layer::slide(int nx, int ny){
   }
   refreshsub(oldx, oldy, oldx+bxsize, oldy+bysize);
   refresh();
-  srflags(r);
 }

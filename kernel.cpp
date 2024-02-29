@@ -175,16 +175,16 @@ extern "C" void nKernelmain(struct arg* ai){
           acpi::shutdown();
         }else if(k==4){
           if(drvd::drvs[bdl]){
+            asm("sti");
             fat* f=(fat*)drvd::drvs[bdl]->files;
             //f->init(drvd::drvs['A']);
-            file* fl=f->getf("haribote.sys", f->rc);
+            file* fl=f->getf("test.txt", f->rc);
             cns->puts("first b:%02x\n", fl->base[0]);
           }
         }else if(k==5){
           if(drvd::drvs['B']){
             unsigned char* b=(unsigned char*)searchmem(512);
             drvd::drvs['B']->read(b, 1, 0);
-            cns->puts("Result first byte:%s\n",b); 
             freemem((unsigned long long)b);
           }
         }else if(k==6&&drvd::drvs['A']){
@@ -200,8 +200,8 @@ extern "C" void nKernelmain(struct arg* ai){
           freemem((unsigned long long)bpb);
         }
       }else if(q==5){
-        asm("cli");
         unsigned long long p=kernelbuf->read();
+        asm("sti");
         unsigned char* k=(unsigned char*)p;
         unsigned char pk[256];
         unsigned char nk[256];
@@ -213,14 +213,16 @@ extern "C" void nKernelmain(struct arg* ai){
           pk[k[i]]=1;
         }
         for(int i=0;i<256;i++){
-          nk[i]=pk[i]==1&&bk[i]==0;
+          nk[i]=(pk[i]==1)&&(bk[i]==0);
           if(nk[i]){
             kernelbuf->write(2);
             kernelbuf->write(usbcode[i]);
+            cns->puts("pushed:%02x\n", usbcode[i]);
           }
           if(pk[i]==0&&bk[i]==1){
             kernelbuf->write(2);
             kernelbuf->write(usbcode[i]|0x80);
+            cns->puts("unpushed:%02x\n", usbcode[i]);
           }
         }
         for(int i=0;i<256;i++){
@@ -231,8 +233,8 @@ extern "C" void nKernelmain(struct arg* ai){
         unsigned int mainaddr=kernelbuf->read();
         unsigned int subaddr=kernelbuf->read();
         drive* drv=(drive*)kernelbuf->read();
-        asm("sti");
         drvd::registdrv(type, mainaddr, subaddr, drv);
+        asm("sti");
       }
     }
   }

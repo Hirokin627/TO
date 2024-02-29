@@ -412,8 +412,9 @@ namespace xhci{
           }
         }
       }
-      asm("cli");
+      asm("sti");
       drivers[slot][di]->comp(trb);
+      
       //asm("sti");
       for(int i=1;i<=maxports;i++){
         if(ports[i].phase==waitfree)resetport(i);
@@ -429,7 +430,6 @@ namespace xhci{
   }
   struct TRB* erdp=(struct TRB*)(rr->ir[0].erdp&~0xf);
   while(erdp->c==c){
-    asm("cli");
     struct TRB t=*erdp;
     erdp++;
     eri++;
@@ -439,6 +439,7 @@ namespace xhci{
       c^=1;
     }
     rr->ir[0].erdp=(unsigned long long)erdp|(rr->ir[0].erdp&0xf);
+    asm("cli");
     switch(t.type){
       case 34:
         recievetrb((struct psctrb*)&t);

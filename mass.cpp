@@ -83,6 +83,7 @@ void mass::comp(struct transfertrb* t){
     return;
     }
   }
+  asm("sti");
   if(initphase==999){
   //controltrans(slot, 1, 11, 0, id.binterfacenumber, 0, 0, 0);
     cns->puts("reset comp bulkin=%d\n", dcbaa[slot]->epcont[bulkin-1].epstate);
@@ -144,13 +145,11 @@ void mass::comp(struct transfertrb* t){
     drive* drv=new usbdrv(slot, id.binterfacenumber);
     drv->bpb=bpb;;
     //unsigned char dl=drvd::registdrv(5, slots[slot].port, id.binterfacenumber, drv);
-    asm("cli");
     kernelbuf->write(6);
     kernelbuf->write(5);
     kernelbuf->write(slots[slot].port);
     kernelbuf->write(id.binterfacenumber);
     kernelbuf->write((unsigned long long)drv);
-    cns->puts("end\n");
   }else if(initphase==5){
     struct CBW* cbw=(struct CBW*)mycbw;
     struct normalTRB* nt=cbw->flags>>7? intrb : outtrb;
@@ -175,7 +174,6 @@ void mass::comp(struct transfertrb* t){
       //tr[slot][bulkin]->push((struct TRB*)intrb);
       //db[slot]=bulkin;
     }else{
-      asm("cli");
       if(csw->status!=0){
         cns->puts("Error code=%d cmd=%02x\n", csw->status, mycbw->cb[0]);
       }
@@ -199,11 +197,10 @@ void mass::comp(struct transfertrb* t){
   }
 }
 void mass::read(unsigned char* buf, unsigned int cnt, unsigned int lba){
-  unsigned int r=rflags();
-  while(initphase!=8){
+  /*while(initphase!=8){
     asm("sti\nhlt");
-  }
-  srflags(r);
+  }*/
+  //srflags(r);
   initphase=5;
   tb=buf;
   struct CBW* cbw=mycbw;
@@ -225,10 +222,11 @@ void mass::read(unsigned char* buf, unsigned int cnt, unsigned int lba){
     posthandle();
     asm("sti");
   }
-  srflags(r);
+  //srflags(r);
 }
 void mass::write(unsigned char* buf, unsigned int cnt, unsigned int lba){
-  while(initphase!=8)asm("sti");
+  unsigned int r=rflags();
+  //while(initphase!=8)asm("sti");
   initphase=5;
   tb=buf;
   struct CBW* cbw=mycbw;
@@ -246,12 +244,11 @@ void mass::write(unsigned char* buf, unsigned int cnt, unsigned int lba){
   outtrb->trbtransferlength=31;
   tr[slot][bulkout]->push((struct TRB*)outtrb);
   db[slot]=bulkout;
-  unsigned int r=rflags();
   while(initphase!=8){
     posthandle();
-    asm("sti\nhlt");
+    asm("sti");
   }
-  srflags(r);
+  //srflags(r);
 }
 usbdrv::usbdrv(unsigned char slot, unsigned char interface){
   intf=(mass*)drivers[slot][interface];

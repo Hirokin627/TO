@@ -40,8 +40,6 @@ int fat::getchainsize(int clus){
   }
 }
 struct fat_ent* fat::search_intent(const char* name, int dir){
-  unsigned int r=rflags();
-  asm("cli");
   bool canuse11=strlen(name)<=12;
   struct fat_ent* d=getintdir(dir);
   for(int i=0;d[i].name[0]!=0;i++){
@@ -100,7 +98,6 @@ struct fat_ent* fat::search_intent(const char* name, int dir){
     }
   }
   freemem((unsigned long long)d);
-  srflags(r);
   return 0;
 }
 void fat::readcluschain(unsigned char* buf, int clus){

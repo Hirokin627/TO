@@ -7,11 +7,18 @@ fifo::fifo(int sz, task* t){
   tsk=t;
 }
 void fifo::write(unsigned long long d){
-  datas[wp]=d;
-  wp++;
-  if(wp==size)wp=0;
-  len++;
-  if(tsk)tsk->run();
+  if(!lock){
+    lock=1;
+    datas[wp]=d;
+    wp++;
+    if(wp==size)wp=0;
+    len++;
+    if(tsk)tsk->run();
+    lock=0;
+  }else{
+    cns->puts("FIFO LOCK ERROR\n");
+    asm("cli\nhlt");
+  }
 }
 unsigned long long fifo::read(){
   unsigned long long d=datas[rp];

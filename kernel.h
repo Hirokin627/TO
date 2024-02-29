@@ -192,6 +192,7 @@ class fifo{
     unsigned long long front(){return datas[rp];};
     unsigned long long* datas;
     int rp,wp;
+    char lock;
     int len,size;
     task* tsk;
 };

@@ -214,23 +214,23 @@ void hid::comp(struct transfertrb* t){
       controltrans(slot, 0b00100001, 11, 1, slots[slot].intn, 0, 0, 0);
     }else{
       if(!off){
-        asm("cli");
         int nmx=getdfornt(&buf[xoff], xsize)*scrxsize/xmax;
         int nmy=getdfornt(&buf[yoff], ysize)*scrysize/ymax;
         int px=nmx-mx;
         int py=nmy-my;
+        //asm("cli");
         kernelbuf->write(0);
         kernelbuf->write(getdfornt(&buf[boff], bsize));
         kernelbuf->write((signed int)px);
         kernelbuf->write((signed int)py);
-        asm("sti");
+        //asm("sti");
       }else{
-        asm("cli");
+        //asm("cli");
         kernelbuf->write(0);
         kernelbuf->write(getdfornt(&buf[boff], 8));
         kernelbuf->write((signed char)getdfornt(&buf[xoff], xsize));
         kernelbuf->write((signed char)getdfornt(&buf[yoff], ysize));
-        asm("sti");
+        //asm("sti");
       }
     }
     tr[slot][intin]->push((struct TRB*)nt);
@@ -238,19 +238,19 @@ void hid::comp(struct transfertrb* t){
   }
   if(!isr){
     if(id.binterfaceprotocol==2){
-      asm("cli");
+      //asm("cli");
       kernelbuf->write(0);
       kernelbuf->write((signed char)buf[0]);
       kernelbuf->write((signed char)buf[1]);
       kernelbuf->write((signed char)buf[2]);
-      asm("sti");
+      //asm("sti");
       tr[slot][intin]->push((struct TRB*)nt);
       db[slot]=intin;
     }else if(id.binterfaceprotocol==1){
-      asm("cli");
+      //asm("cli");
       kernelbuf->write(5);
       kernelbuf->write((unsigned long long)buf);
-      asm("sti");
+      //asm("sti");
       tr[slot][intin]->push((struct TRB*)nt);
       db[slot]=intin;
     }
