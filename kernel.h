@@ -66,6 +66,7 @@ int dir;
 char attr;
 char name[256];
 } file;
+#include "dirent.h"
 struct BPB {
   uint8_t jump_boot[3];
   char oem_name[8];
@@ -236,9 +237,16 @@ class fs{
     virtual file* getf(const char* n, int dn){
       return 0;
     };
+    virtual dirent* getd(const char* n, int dn){
+      return 0;
+    };
+    virtual int getdn(const char* n, int dn){
+      return -1;
+    };
     virtual void init(drive* d){
       
     };
+    unsigned int rc;
 };
 class fat : public fs{
   public:
@@ -253,10 +261,11 @@ class fat : public fs{
     struct fat_ent* search_intent(const char* name, int dir);
     int getchainsize(int clus);
     file* getf(const char* n, int dir) override;
+    dirent* getd(const char* n, int dir) override;
+    int getdn(const char* n, int dir) override;
     unsigned char* ff;
     struct BPB* bpb;
     drive* dv;
-    unsigned int rc;
     unsigned int* fats;
 };
 void memory_init(EFI_MEM* mems, unsigned long long dsize, unsigned long long bsize);
@@ -269,6 +278,7 @@ void freemem(addr_t addr);
 void set_idt(int n, unsigned long long offset, short sel, unsigned char attr);
 void pic_init();
 void sti();
+file* fopen(const char* name);
 void open_irq(char irq);
 namespace layerd{
   void init();

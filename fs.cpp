@@ -127,6 +127,62 @@ file* fat::getf(const char* n, int dir){
   return f;
   
 }
+int getclus(struct fat_ent* fe){
+  return (fe->clus_l)|(fe->clus_h<<16);
+}
+int fat::getdn(const char* n, int dir){
+  struct fat_ent* fe=search_intent(n, dir);
+  if(fe==0)return -1;
+  if(fe->attr!=0x10){
+    cns->puts("Invalid attr:%02x\n", fe->attr);
+    return -1;
+  }
+  int dn=getclus(fe);
+  delete fe;
+  return dn;
+}
+dirent* fat::getd(const char* n, int dir){
+  struct fat_ent* fe;
+  if(strcmp(n, ".")){
+    fe=search_intent(n, dir);
+    if(fe==0)return 0;
+  }else{
+    fe=new struct fat_ent;
+    fe->clus_l=dir&0xffff;
+    fe->clus_h=(dir>>16)&0xffff;
+  }
+  struct fat_ent* dc=getintdir(getclus(fe));
+  int me=0;
+  for(int i=0;dc[i].name[0]!=0;i++){
+    if(dc[i].attr==0x0f){
+      me++;
+      i+=dc[i].name[0]&0x1f;
+    }else if(dc[i].attr!=0x08){
+      me++;
+    }
+  }
+  dirent* de=(dirent*)searchmem(sizeof(dirent)*(me+1));
+  int dp=0;
+  for(int i=0;dc[i].name[0]!=0;i++){
+    if(dc[i].attr==0x0f){
+      struct fat_lent* l=(struct fat_lent*)&dc[i];
+      char* n=(char*)de[dp].name;
+      for(int j=0;j<5;j++)
+        n[j]=l->name[j*2];
+      for(int j=0;j<6;j++)
+        n[5+j]=l->name2[j*2];
+      for(int j=0;j<2;j++)
+        n[11+j]=l->name3[j*2];
+      de[dp].namelen=strlen((const char*)de[dp].name);
+      de[dp].reclen=sizeof(dirent);
+      dp++;
+    }else{               
+    }
+  }
+  delete fe;
+  freemem((unsigned long long)dc);
+  return de;
+}
 struct filefs{
   file* f;
   fs* files;
@@ -148,8 +204,66 @@ namespace fsd{
     freemem((unsigned long long)fsb);
   }
 };
-file* fopen(const char name){
-  char n[256];
+void setmustdir(unsigned char* dl, char** path, int* dn, const char* n,char ddl=bdl){
+  //cns->puts("bdl=%c\n", ddl);
+  int sd=0;
+  fs* s=drvd::drvs[ddl]->files;
+  unsigned char d=ddl;
+  if(n[strlen(n)-1]=='/')*(unsigned char*)&n[strlen(n)-1]=0;
+  if(n[1]==':'){
+    d=n[0];  
+  }
+  sd=s->rc;
+  //cns->puts("sd=%d\n", sd);
+  char* cn=(char*)searchmem(strlen(n)+1);
+  strcpy(cn, n);
+  int ss=strlen(cn);
+  int md=0;
+  for(int i=0;i<ss;i++){
+    if(cn[i]=='/'){
+      cn[i]=0;
+      md++;
+    }
+  }
+  //cns->puts("md=%d\n", md);
+  int p=0;
+  for(int i=0;i<md;i++,p+=strlen((const char*)&cn[p])+1){
+    //cns->puts("name=%s dir=%d\n", &cn[p], sd);
+    int nd=s->getdn((const char*)&cn[p], sd);
+    //cns->puts("nd=%d\n", nd);
+    if(nd==-1){
+      //cns->puts("invalid\n");
+      return;
+    }
+    sd=nd;
+  }
+  //cns->puts("path=%s\n", &cn[p]);
+  char* pth=(char*)searchmem(strlen((const char*)&cn[p])+1);
+  strcpy(pth, (const char*)&cn[p]);
+  *dl=d;
+  *path=pth;
+  *dn=sd;
+}
+file* fopen(const char* name){
+  char* n;
   fs* files;
-  return 0;
+  unsigned char dl;
+  int dn;
+  setmustdir(&dl, &n, &dn, name);  
+  //cns->puts("recieve data\ndl=%c pth=%s dir=%d\n", dl, n, dn);
+  files=drvd::drvs[dl]->files;
+  file* f=files->getf((const char*)n, dn);
+  freemem((unsigned long long)n);
+  return f;
+}
+dirent* opendir(const char* name){
+  char* n;
+  fs* files;
+  unsigned char dl;
+  int dn;
+  setmustdir(&dl, &n, &dn, name);
+  files=drvd::drvs[dl]->files;
+  dirent* de=files->getd(n, dn);
+  freemem((unsigned long long)n);
+  return de;
 }

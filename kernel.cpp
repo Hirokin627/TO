@@ -182,20 +182,18 @@ extern "C" void nKernelmain(struct arg* ai){
             cns->puts("first b:%02x\n", fl->base[0]);
           }
         }else if(k==5){
-          if(drvd::drvs['B']){
-            unsigned char* b=(unsigned char*)searchmem(512);
-            drvd::drvs['B']->read(b, 1, 0);
-            freemem((unsigned long long)b);
+          fat* f=(fat*)drvd::drvs[bdl]->files;
+          dirent* d=f->getd(".", f->rc);
+          while(d->reclen){
+            cns->puts("name:%s\n", d->name);
+            d++;
           }
-        }else if(k==6&&drvd::drvs['A']){
+        }else if(k==6&&drvd::drvs[bdl]){
+          file* f=fopen("efi/boot/bootx64.efi");
+            cns->puts("first b:%02x\n", f->base[0]);
+        }else if(k==7&&drvd::drvs['B']&&drvd::drvs[bdl]){
           struct BPB* bpb=(struct BPB*)searchmem(512);
-          drvd::drvs['A']->read((unsigned char*)bpb, 1, 0);
-          bpb->oem_name[0]='A';
-          drvd::drvs['A']->write((unsigned char*)bpb, 1, 0);
-          freemem((unsigned long long)bpb);
-        }else if(k==7&&drvd::drvs['B']&&drvd::drvs['A']){
-          struct BPB* bpb=(struct BPB*)searchmem(512);
-          drvd::drvs['A']->read((unsigned char*)bpb, 1, 0);
+          drvd::drvs[bdl]->read((unsigned char*)bpb, 1, 0);
           drvd::drvs['B']->write((unsigned char*)bpb, 1, 0);
           freemem((unsigned long long)bpb);
         }
