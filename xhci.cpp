@@ -290,7 +290,7 @@ namespace xhci{
       resetport(port);
     }*/
     if(trb->code!=1&&trb->code!=13){
-      //cns->puts("TRB Error detect:%d\n", trb->code);
+      cns->puts("TRB Error detect:%d\n", trb->code);
     }
     if(slots[slot].phase==getcdesc){
       if(trb->code==1||trb->code==13){

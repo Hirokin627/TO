@@ -211,7 +211,9 @@ void hid::comp(struct transfertrb* t){
       decoderd(this, (unsigned char*)*(unsigned long long*)*(unsigned long long*)t, reportlength-t->trbtransferlength);
       if(slots[slot].type==USBRKeyboard&&kasize==0)return;
       initphase=1;
-      controltrans(slot, 0b00100001, 11, 1, slots[slot].intn, 0, 0, 0);
+      //controltrans(slot, 0b00100001, 11, 1, slots[slot].intn, 0, 0, 0);
+      tr[slot][intin]->push((struct TRB*)nt);
+      db[slot]=intin;
     }else{
       if(!off){
         int nmx=getdfornt(&buf[xoff], xsize)*scrxsize/xmax;

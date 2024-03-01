@@ -256,6 +256,9 @@ file* fopen(const char* name){
   freemem((unsigned long long)n);
   return f;
 }
+void closef(file* f){
+  delete f;
+}
 dirent* opendir(const char* name){
   char* n;
   fs* files;
@@ -266,4 +269,7 @@ dirent* opendir(const char* name){
   dirent* de=files->getd(n, dn);
   freemem((unsigned long long)n);
   return de;
+}
+void closedir(dirent* d){
+  freemem((unsigned long long)d);
 }

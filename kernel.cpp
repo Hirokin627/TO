@@ -24,8 +24,8 @@ void testt(){
   asm("cli");
   new window(600, 600);
   while(1){
-    asm("sti");
-    switchcont(&taska, &taskb);
+    asm("sti\nhlt");
+    //switchcont(&taska, &taskb);
   }
 }
 unsigned char dp[44];
@@ -61,9 +61,9 @@ extern "C" void nKernelmain(struct arg* ai){
   taskb.rflags=0x202;
   *(unsigned int*)&taskb.fx_area[24]=0x1f80;
   taskb.rsp=searchmem(1024)+1024-8;
-  /*task* ta=mtaskd::init();*/
   //cns->l->updown(-1);
   timerd::init();
+  task* ta=mtaskd::init();
   layer* l=new layer(16, 16);
   l->col_inv=-1;
   static char cursor[16][17]={
@@ -115,7 +115,7 @@ extern "C" void nKernelmain(struct arg* ai){
   while(1){
     asm("cli");
     if(kernelbuf->len==0){
-      asm("sti");
+      asm("sti\nhlt");
       //switchcont(&taskb, &taska);
       //asm("sti");
     }else{
@@ -180,17 +180,21 @@ extern "C" void nKernelmain(struct arg* ai){
             //f->init(drvd::drvs['A']);
             file* fl=f->getf("test.txt", f->rc);
             cns->puts("first b:%02x\n", fl->base[0]);
+            closef(fl);
           }
         }else if(k==5){
           fat* f=(fat*)drvd::drvs[bdl]->files;
           dirent* d=f->getd(".", f->rc);
-          while(d->reclen){
-            cns->puts("name:%s\n", d->name);
-            d++;
+          dirent* de=d;
+          while(de->reclen){
+            cns->puts("name:%s\n", de->name);
+            de++;
           }
+          closedir(d);
         }else if(k==6&&drvd::drvs[bdl]){
           file* f=fopen("efi/boot/bootx64.efi");
-            cns->puts("first b:%02x\n", f->base[0]);
+          cns->puts("first b:%02x\n", f->base[0]);
+          closef(f);
         }else if(k==7&&drvd::drvs['B']&&drvd::drvs[bdl]){
           struct BPB* bpb=(struct BPB*)searchmem(512);
           drvd::drvs[bdl]->read((unsigned char*)bpb, 1, 0);

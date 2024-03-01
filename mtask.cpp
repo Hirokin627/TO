@@ -5,7 +5,7 @@ namespace mtaskd{
   timer* mt;
   task* current;
   fifo* tasks;
-  struct tc* ctp;
+  struct tc* ctp=&taska;
   void onlyhlt(){
     while(1)asm("sti\nhlt");
   }
@@ -13,23 +13,27 @@ namespace mtaskd{
     mt=new timer;
     tasks=new fifo(128);
     ctp=&taska;
-    task* t=new task(0);
+    /*task* t=new task(0);
     switchcont(t->ct, t->ct);
     current=t;
     t->run();
     task* oh=new task((unsigned long long)onlyhlt);
     oh->run();
-    switchcont(&taska, &taska);
+    switchcont(&taska, &taska);*/
     mt->set(switchcyc);
-    return t;
+    return 0;
   }
   void taskswitch(bool cc){
     mt->set(switchcyc);
-    task* t=(task*)tasks->read();
+    struct tc* old=ctp;
+    if(old==&taska)ctp=&taskb;
+    else if(old==&taskb)ctp=&taska;
+    switchcont(ctp, old);
+    /*task* t=(task*)tasks->read();
     if(!cc)tasks->write((unsigned long long)t);
     task* n=(task*)tasks->front();
     current=n;
-    switchcont(n->ct, t->ct);
+    switchcont(n->ct, t->ct);*/
   }
 };
 using namespace mtaskd;

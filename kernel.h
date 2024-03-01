@@ -279,6 +279,8 @@ void set_idt(int n, unsigned long long offset, short sel, unsigned char attr);
 void pic_init();
 void sti();
 file* fopen(const char* name);
+void closef(file* f);
+void closedir(dirent*);
 void open_irq(char irq);
 namespace layerd{
   void init();
