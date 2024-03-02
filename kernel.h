@@ -31,10 +31,12 @@ typedef struct {
 #define ITS_TB 8
 class console;
 class fifo;
+class task;
 class window;
 extern int* vram;
 extern int scrxsize,scrysize;
 extern unsigned char bdl;
+extern task* ta;
 extern window* nowb;
 extern console* cns;
 extern fifo* kernelbuf;
@@ -268,6 +270,11 @@ class fat : public fs{
     drive* dv;
     unsigned int* fats;
 };
+class terminal{
+  public:
+    void m(task* t);
+    task* tsk;
+};
 void memory_init(EFI_MEM* mems, unsigned long long dsize, unsigned long long bsize);
 void x64_init();
 unsigned long long getpaddr(unsigned long long* p4, unsigned long long vaddr);
@@ -285,6 +292,7 @@ void open_irq(char irq);
 namespace layerd{
   void init();
   void refreshsub(int x0, int y0, int x1, int y1);
+  void trefreshsub(int x0, int y0, int x1, int y1);
   extern int top;
   layer* checkcrick(int mx, int my);
 };
@@ -330,6 +338,9 @@ namespace drvd{
 namespace fsd{
   void recognizefs(unsigned char d);
   void init();
+};
+namespace terminald{
+  void main(task* tsk);
 };
 extern "C"{
   void setcr3(unsigned long long*);

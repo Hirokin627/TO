@@ -28,7 +28,7 @@ namespace layerd{
   }
   unsigned int mixc(unsigned int bc, unsigned int fc, unsigned char i){
   }
-  void refreshsub(int x0, int y0, int x1, int y1){
+  void trefreshsub(int x0, int y0, int x1, int y1){
     if(x0<0)x0=0;
     if(y0<0)y0=0;
     if(x1>scrxsize)x1=scrxsize;
@@ -55,6 +55,20 @@ namespace layerd{
       for(int x=x0;x<x1;x++){
         vram[y*scrxsize+x]=sb[y*scrxsize+x];
       }
+    }
+  }
+  void refreshsub(int x0, int y0, int x1, int y1){
+    //trefreshsub(x0, y0, x1, y1);
+    if(mtaskd::mt&&(mtaskd::current!=ta)){
+      asm("cli");
+      kernelbuf->write(7);
+      kernelbuf->write(x0);
+      kernelbuf->write(y0);
+      kernelbuf->write(x1);
+      kernelbuf->write(y1);
+      //asm("cli\nhlt");
+    }else{
+      trefreshsub(x0, y0, x1, y1);
     }
   }
   layer* checkcrick(int mx, int my){

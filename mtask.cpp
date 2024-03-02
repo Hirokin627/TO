@@ -2,7 +2,7 @@
 extern struct tc taska,taskb;
 namespace mtaskd{
   #define switchcyc 2
-  timer* mt;
+  timer* mt=0;
   task* current;
   fifo* tasks;
   struct tc* ctp=&taska;
@@ -13,27 +13,23 @@ namespace mtaskd{
     mt=new timer;
     tasks=new fifo(128);
     ctp=&taska;
-    /*task* t=new task(0);
+    task* t=new task(0);
     switchcont(t->ct, t->ct);
     current=t;
     t->run();
     task* oh=new task((unsigned long long)onlyhlt);
-    oh->run();
-    switchcont(&taska, &taska);*/
+    //oh->run();
+    switchcont(&taska, &taska);
     mt->set(switchcyc);
-    return 0;
+    return t;
   }
   void taskswitch(bool cc){
     mt->set(switchcyc);
-    struct tc* old=ctp;
-    if(old==&taska)ctp=&taskb;
-    else if(old==&taskb)ctp=&taska;
-    switchcont(ctp, old);
-    /*task* t=(task*)tasks->read();
+    task* t=(task*)tasks->read();
     if(!cc)tasks->write((unsigned long long)t);
     task* n=(task*)tasks->front();
     current=n;
-    switchcont(n->ct, t->ct);*/
+    switchcont(n->ct, t->ct);
   }
 };
 using namespace mtaskd;

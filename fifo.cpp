@@ -13,6 +13,7 @@ void fifo::write(unsigned long long d){
     wp++;
     if(wp==size)wp=0;
     len++;
+    //if(len==size)asm("cli\nhlt");
     if(tsk)tsk->run();
     lock=0;
   }else{

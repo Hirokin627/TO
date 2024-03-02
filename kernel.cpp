@@ -23,6 +23,7 @@ const char usbcode[256]={
 void testt(){
   asm("cli");
   new window(600, 600);
+  mtaskd::current->sleep();
   while(1){
     asm("sti\nhlt");
     //switchcont(&taska, &taskb);
@@ -31,6 +32,7 @@ void testt(){
 unsigned char dp[44];
 unsigned char bdl;
 EFI_DEVICE_PATH_PROTOCOL* bdpp=(EFI_DEVICE_PATH_PROTOCOL*)dp;
+task* ta;
 extern "C" void nKernelmain(struct arg* ai){
   cli();
   asm("cli");
@@ -46,13 +48,13 @@ extern "C" void nKernelmain(struct arg* ai){
   ia32=0x500;
   writemsr(0xc0000080, ia32);
   x64_init();
+  kernelbuf=new fifo(128);
   layerd::init();
   cns=new console(60, (scrysize)/16);
   pci::init();
   pic_init();
   asm("sti");
   cns->puts("MSR=%x\n", readmsr(0xc0000080));
-  kernelbuf=new fifo(128);
   ps2::init();
   taskb.cr3=(unsigned long long)getcr3();
   taskb.rip=(unsigned long long)testt;
@@ -63,7 +65,9 @@ extern "C" void nKernelmain(struct arg* ai){
   taskb.rsp=searchmem(1024)+1024-8;
   //cns->l->updown(-1);
   timerd::init();
-  task* ta=mtaskd::init();
+  ta=mtaskd::init();
+  task* tb=new task((unsigned long long)testt);
+  tb->run();
   layer* l=new layer(16, 16);
   l->col_inv=-1;
   static char cursor[16][17]={
@@ -109,8 +113,6 @@ extern "C" void nKernelmain(struct arg* ai){
   window* mw;
   int mpx,mpy;
   xhci::init();
-  /*task* tb=new task((unsigned long long)testt);
-  tb->run();*/
   unsigned char bk[256];
   while(1){
     asm("cli");
@@ -131,7 +133,11 @@ extern "C" void nKernelmain(struct arg* ai){
           }
           layer* l=layerd::checkcrick(mx, my);
           if(!(l->flags&ITS_WINDOW))l=0;
-          if(nowb->cs!=l&&!mw){
+          layer* lcs=0;
+          if(l){
+            lcs=l->master? l->master : l;
+          }
+          if((nowb->cs!=lcs)&&!mw){
             nowb->setactive(false);
           }
           if(l&&!mw){
@@ -167,8 +173,8 @@ extern "C" void nKernelmain(struct arg* ai){
         if(k==1){
           window* nw=new window(200, 200);
         }else if(k==2){
-          /*task* nt=new task((unsigned long long)testt);
-          nt->run();*/
+          task* nt=new task((unsigned long long)testt);
+          nt->run();
         }else if(k==0x1c){
           io_out8(0x64, 0xfe);
         }else if(k==3){
@@ -195,11 +201,10 @@ extern "C" void nKernelmain(struct arg* ai){
           file* f=fopen("efi/boot/bootx64.efi");
           cns->puts("first b:%02x\n", f->base[0]);
           closef(f);
-        }else if(k==7&&drvd::drvs['B']&&drvd::drvs[bdl]){
-          struct BPB* bpb=(struct BPB*)searchmem(512);
-          drvd::drvs[bdl]->read((unsigned char*)bpb, 1, 0);
-          drvd::drvs['B']->write((unsigned char*)bpb, 1, 0);
-          freemem((unsigned long long)bpb);
+        }else if(k==7){
+          task* t=new task((unsigned long long)terminald::main);
+          t->ct->rdi=(unsigned long long)t;
+          t->run();
         }
       }else if(q==5){
         unsigned long long p=kernelbuf->read();
@@ -237,6 +242,12 @@ extern "C" void nKernelmain(struct arg* ai){
         drive* drv=(drive*)kernelbuf->read();
         drvd::registdrv(type, mainaddr, subaddr, drv);
         asm("sti");
+      }else if(q==7){
+        int x0=kernelbuf->read();
+        int y0=kernelbuf->read();
+        int x1=kernelbuf->read();
+        int y1=kernelbuf->read();
+        layerd::trefreshsub(x0, y0, x1, y1);
       }
     }
   }
