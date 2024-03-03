@@ -36,6 +36,7 @@ class window;
 extern int* vram;
 extern int scrxsize,scrysize;
 extern unsigned char bdl;
+extern const char keytable0[0x80];
 extern task* ta;
 extern window* nowb;
 extern console* cns;
@@ -172,7 +173,7 @@ class layer{
 class console{
   public:
     console(int line, int row);
-    void putc(char chr);
+    void putc(char chr, bool nf=true);
     void putsns(const char* str);
     void puts(const char* format,...);
     void nline();
@@ -186,6 +187,7 @@ class task{
     void run();
     void sleep();
     struct tc* ct;
+    fifo* f;
 };
 class fifo{
   public:
@@ -206,6 +208,7 @@ class window{
     layer* cs;
     layer* edge;
     layer* tb;
+    task* owner;
 };
 class timer{
   public:

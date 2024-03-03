@@ -10,6 +10,17 @@ extern "C" caddr_t sbrk(size_t size){
 int mx,my;
 window* nowb;
 alignas(16) struct tc taska,taskb;
+
+const char keytable0[0x80]={
+0, 0, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '^', 0x08, 0, 
+'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '@', '[', 0x0a, 0, 'a', 's', 
+'d', 'f', 'g', 'h', 'j', 'k', 'l', ';', ':', 0, 0, ']', 'z', 'x', 'c', 'v', 
+'b', 'n', 'm', ',', '.', '/', 0, '*', 0, ' ', 0, 0, 0, 0, 0, 0, 
+0, 0, 0, 0, 0, 0, 0, '7', '8', '9', '-', '4', '5', '6', '+', '1', 
+'2', '3', '0', '.', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+0, 0, 0, '\\', 0, 0, 0, 0, 0, 0, 0, 0, 0, '\\', 0, 0, 
+};
 const char usbcode[256]={
 0x00,0x00,0x00,0x00,0x1e,0x30,0x2e,0x20,0x12,0x21,0x22,0x23,0x17,0x24,0x25,0x26,
 0x32,0x31,0x18,0x19,0x10,0x13,0x1f,0x14,0x16,0x2f,0x11,0x2d,0x15,0x2c,0x02,0x03,
@@ -176,7 +187,7 @@ extern "C" void nKernelmain(struct arg* ai){
           task* nt=new task((unsigned long long)testt);
           nt->run();
         }else if(k==0x1c){
-          io_out8(0x64, 0xfe);
+          //io_out8(0x64, 0xfe);
         }else if(k==3){
           acpi::shutdown();
         }else if(k==4){
@@ -202,9 +213,16 @@ extern "C" void nKernelmain(struct arg* ai){
           cns->puts("first b:%02x\n", f->base[0]);
           closef(f);
         }else if(k==7){
+          asm("cli");
           task* t=new task((unsigned long long)terminald::main);
           t->ct->rdi=(unsigned long long)t;
           t->run();
+        }
+        if(nowb){
+          if(nowb->owner){
+            nowb->owner->f->write(2);
+            nowb->owner->f->write(k);
+          }
         }
       }else if(q==5){
         unsigned long long p=kernelbuf->read();
@@ -224,12 +242,10 @@ extern "C" void nKernelmain(struct arg* ai){
           if(nk[i]){
             kernelbuf->write(2);
             kernelbuf->write(usbcode[i]);
-            cns->puts("pushed:%02x\n", usbcode[i]);
           }
           if(pk[i]==0&&bk[i]==1){
             kernelbuf->write(2);
             kernelbuf->write(usbcode[i]|0x80);
-            cns->puts("unpushed:%02x\n", usbcode[i]);
           }
         }
         for(int i=0;i<256;i++){

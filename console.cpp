@@ -5,10 +5,10 @@ console::console(int line, int row){
   l=new layer(line*8, row*16);
   l->updown(layerd::top+1);
 }
-void console::putc(char chr){
+void console::putc(char chr, bool nf){
   switch(chr){
     default:
-      graphic::putfont(l, 0xffffff, cx, cy, chr, true);
+      graphic::putfont(l, 0xffffff, cx, cy, chr, nf);
       cx+=8;
       break;
     case '\n':
@@ -17,7 +17,20 @@ void console::putc(char chr){
   }
 }
 void console::putsns(const char* str){
-  for(int i=0;str[i]!=0;i++)putc(str[i]);
+  int bx=cx;
+  int by=cy;
+  int ss=strlen(str);
+  int ex=(cx+ss*8);
+  int ey=(cy+16);
+  if(ex>l->bxsize){
+    ex=l->bxsize;
+    ey+=16;
+  }
+  if(ey>l->bysize){
+    ey=l->bysize;
+  }
+  for(int i=0;str[i]!=0;i++)putc(str[i], false);
+  l->refreshconfro(bx, by, ex, ey);
 }
 void console::nline(){
   cy+=16;

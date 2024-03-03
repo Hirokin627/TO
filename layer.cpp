@@ -66,6 +66,7 @@ namespace layerd{
       kernelbuf->write(y0);
       kernelbuf->write(x1);
       kernelbuf->write(y1);
+      mtaskd::taskswitch();
       //asm("cli\nhlt");
     }else{
       trefreshsub(x0, y0, x1, y1);
