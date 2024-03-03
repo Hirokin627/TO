@@ -188,6 +188,7 @@ class task{
     void sleep();
     struct tc* ct;
     fifo* f;
+    int cd;
 };
 class fifo{
   public:
@@ -290,6 +291,7 @@ void pic_init();
 void sti();
 file* fopen(const char* name);
 void closef(file* f);
+dirent* opendir(const char* name);
 void closedir(dirent*);
 void open_irq(char irq);
 namespace layerd{

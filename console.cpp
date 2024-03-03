@@ -11,6 +11,12 @@ void console::putc(char chr, bool nf){
       graphic::putfont(l, 0xffffff, cx, cy, chr, nf);
       cx+=8;
       break;
+    case '\b':
+      if(cx>0){
+        cx-=8;
+        graphic::drawbox(l, 0, cx, cy, cx+7, cy+15, true);
+      }
+      break;
     case '\n':
       nline();
       break;

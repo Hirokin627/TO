@@ -118,6 +118,7 @@ file* fat::getf(const char* n, int dir){
   if(fe==0)return 0;
   file* f=new file;
   int size=fe->filesize;
+  if(size==0)size=1024;
   f->ptr=(char*)searchmem((size+1023)/1024);
   f->base=f->ptr;
   f->cnt=f->size;
@@ -138,6 +139,7 @@ int fat::getdn(const char* n, int dir){
     return -1;
   }
   int dn=getclus(fe);
+  if(dn==0)dn=rc;
   delete fe;
   return dn;
 }
@@ -175,6 +177,9 @@ dirent* fat::getd(const char* n, int dir){
         n[11+j]=l->name3[j*2];
       de[dp].namelen=strlen((const char*)de[dp].name);
       de[dp].reclen=sizeof(dirent);
+      if(l[l->ord&0x1f].attr==0x10){
+        de[dp].type=4;
+      }
       dp++;
     }else{               
     }
@@ -202,18 +207,20 @@ namespace fsd{
       drv->files->init(drv);
     }
     freemem((unsigned long long)fsb);
+    cns->puts("rc=%d mtas=%p\n", drv->files->rc, mtaskd::current);
+    mtaskd::current->cd=drv->files->rc;
   }
 };
 void setmustdir(unsigned char* dl, char** path, int* dn, const char* n,char ddl=bdl){
   //cns->puts("bdl=%c\n", ddl);
-  int sd=0;
+  int sd=mtaskd::current->cd;
   fs* s=drvd::drvs[ddl]->files;
   unsigned char d=ddl;
   if(n[strlen(n)-1]=='/')*(unsigned char*)&n[strlen(n)-1]=0;
   if(n[1]==':'){
     d=n[0];  
-  }
   sd=s->rc;
+  }
   //cns->puts("sd=%d\n", sd);
   char* cn=(char*)searchmem(strlen(n)+1);
   strcpy(cn, n);

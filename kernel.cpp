@@ -162,6 +162,12 @@ extern "C" void nKernelmain(struct arg* ai){
             nowb->cs->updown(layerd::top-1);
             nowb->setactive(true);
           }
+          if(!l&&!mw){
+            if(nowb){
+              nowb->setactive(false);
+              nowb=0;
+            }
+          }
         }else{
           if(mw){
             mw->cs->slide(mw->cs->x+mpx, mw->cs->y+mpy);
@@ -181,47 +187,48 @@ extern "C" void nKernelmain(struct arg* ai){
       }else if(q==2){
         unsigned char k=kernelbuf->read();
         asm("sti");
-        if(k==1){
-          window* nw=new window(200, 200);
-        }else if(k==2){
-          task* nt=new task((unsigned long long)testt);
-          nt->run();
-        }else if(k==0x1c){
-          //io_out8(0x64, 0xfe);
-        }else if(k==3){
-          acpi::shutdown();
-        }else if(k==4){
-          if(drvd::drvs[bdl]){
-            asm("sti");
-            fat* f=(fat*)drvd::drvs[bdl]->files;
-            //f->init(drvd::drvs['A']);
-            file* fl=f->getf("test.txt", f->rc);
-            cns->puts("first b:%02x\n", fl->base[0]);
-            closef(fl);
-          }
-        }else if(k==5){
-          fat* f=(fat*)drvd::drvs[bdl]->files;
-          dirent* d=f->getd(".", f->rc);
-          dirent* de=d;
-          while(de->reclen){
-            cns->puts("name:%s\n", de->name);
-            de++;
-          }
-          closedir(d);
-        }else if(k==6&&drvd::drvs[bdl]){
-          file* f=fopen("efi/boot/bootx64.efi");
-          cns->puts("first b:%02x\n", f->base[0]);
-          closef(f);
-        }else if(k==7){
-          asm("cli");
-          task* t=new task((unsigned long long)terminald::main);
-          t->ct->rdi=(unsigned long long)t;
-          t->run();
-        }
         if(nowb){
           if(nowb->owner){
             nowb->owner->f->write(2);
             nowb->owner->f->write(k);
+          }
+        }else{
+          if(k==1){
+            window* nw=new window(200, 200);
+          }else if(k==2){
+            task* nt=new task((unsigned long long)testt);
+            nt->run();
+          }else if(k==0x1c){
+            io_out8(0x64, 0xfe);
+          }else if(k==3){
+            acpi::shutdown();
+          }else if(k==4){
+            if(drvd::drvs[bdl]){
+              asm("sti");
+              fat* f=(fat*)drvd::drvs[bdl]->files;
+              //f->init(drvd::drvs['A']);
+              file* fl=f->getf("test.txt", f->rc);
+              cns->puts("first b:%02x\n", fl->base[0]);
+              closef(fl);
+            }
+          }else if(k==5){
+            fat* f=(fat*)drvd::drvs[bdl]->files;
+            dirent* d=f->getd(".", f->rc);
+            dirent* de=d;
+            while(de->reclen){
+              cns->puts("name:%s\n", de->name);
+              de++;
+            }
+            closedir(d);
+          }else if(k==6&&drvd::drvs[bdl]){
+            file* f=fopen("efi/boot/bootx64.efi");
+            cns->puts("first b:%02x\n", f->base[0]);
+            closef(f);
+          }else if(k==7){
+            asm("cli");
+            task* t=new task((unsigned long long)terminald::main);
+            t->ct->rdi=(unsigned long long)t;
+            t->run();
           }
         }
       }else if(q==5){
