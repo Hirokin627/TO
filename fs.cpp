@@ -121,6 +121,7 @@ file* fat::getf(const char* n, int dir){
   if(size==0)size=1024;
   f->ptr=(char*)searchmem((size+1023)/1024);
   f->base=f->ptr;
+  f->size=fe->filesize;
   f->cnt=f->size;
   strcpy(f->name, n);
   readcluschain((unsigned char*)f->ptr, (fe->clus_h<<16)|fe->clus_l);

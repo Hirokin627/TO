@@ -77,8 +77,6 @@ extern "C" void nKernelmain(struct arg* ai){
   //cns->l->updown(-1);
   timerd::init();
   ta=mtaskd::init();
-  task* tb=new task((unsigned long long)testt);
-  tb->run();
   layer* l=new layer(16, 16);
   l->col_inv=-1;
   static char cursor[16][17]={

@@ -10,13 +10,15 @@ void terminal::m(task* t){
   asm("cli");
   cns->puts("terminal called\n");
   tsk=t;
-  window* w=new window(60*8, 20*16);
+  int line=60;
+  int rows=15;
+  window* w=new window(line*8, rows*16);
   w->owner=t;
   cns->puts("terminal started\n");
   graphic::drawbox(w->cs, 0, 0, 0, w->cs->bxsize-1, w->cs->bysize-1);
   timer* tm=new timer;
   fifo* f=t->f;
-  console* cns=new console(60, 20);
+  console* cns=new console(line, rows);
   cns->l->updown(layerd::top-1);
   cns->l->flags|=ITS_WINDOW;
   w->cs->registss(cns->l);
@@ -72,10 +74,21 @@ void terminal::m(task* t){
                 setmustdir(&dl, &path, &dn,  (char*)f_arg);
                 t->cd=drvd::drvs[bdl]->files->getdn((const char*)path, dn);
               }
+            }else if(!strcmp((const char*)cmdl, "cat")){
+              file* f=fopen((const char*)f_arg);
+              if(f){
+                for(int i=0;i<f->size;i++){
+                  cns->putc(f->base[i]);
+                }
+                cns->nline();
+                closef(f);
+              }else{
+                cns->puts("File not found\n");
+              }
             }else if(cmdl[0]!=0){
               file* f=fopen((const char*)cmdl);
               if(f){
-                cns->puts("File present\n");
+                cns->puts("File present first byte:%02x\n", f->base[0]);
                 closef(f);
               }else{
                 cns->puts("File not present\n");
