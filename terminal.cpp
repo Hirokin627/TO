@@ -72,7 +72,10 @@ void terminal::m(task* t){
                 unsigned char dl;
                 char* path;
                 setmustdir(&dl, &path, &dn,  (char*)f_arg);
-                t->cd=drvd::drvs[bdl]->files->getdn((const char*)path, dn);
+                dn=drvd::drvs[bdl]->files->getdn((const char*)path, dn);
+                if(dn>=0){
+                  t->cd=dn;
+                }
               }
             }else if(!strcmp((const char*)cmdl, "cat")){
               file* f=fopen((const char*)f_arg);

@@ -10,6 +10,10 @@ void console::putc(char chr, bool nf){
     default:
       graphic::putfont(l, 0xffffff, cx, cy, chr, nf);
       cx+=8;
+      if(cx>=l->bxsize){
+        nline();
+        cx=0;
+      }
       break;
     case '\b':
       if(cx>0){
