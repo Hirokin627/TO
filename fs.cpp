@@ -19,7 +19,9 @@ int fat::calcclus(int c){
 }
 void fat::readclus(unsigned char* buf, int cnt, int clus){
   for(int i=0;i<cnt;i++){
-    dv->read(&buf[i*512*bpb->sectors_per_cluster], bpb->sectors_per_cluster, calcclus(clus+i));
+    for(int j=0;j<bpb->sectors_per_cluster;j++){
+      dv->read(&buf[i*512*bpb->sectors_per_cluster+j*512], 1, calcclus(clus+i)+j);
+    }
   }
 }
 int fat::readfat(int ind){
@@ -119,7 +121,8 @@ file* fat::getf(const char* n, int dir){
   file* f=new file;
   int size=fe->filesize;
   if(size==0)size=1024;
-  f->ptr=(char*)searchmem((size+1023)/1024);
+  cns->puts("filesize=%x\n", size);
+  f->ptr=(char*)searchmem((size+0xfff));
   f->base=f->ptr;
   f->size=fe->filesize;
   f->cnt=f->size;
@@ -205,7 +208,9 @@ namespace fsd{
     drv->read(fsb, 1, 0);
     if(!strncmp((const char*)&fsb[0x52], "FAT32", 5)){
       drv->files=new fat;
+      fat* ft=(fat*)drv->files;
       drv->files->init(drv);
+      cns->puts("bpc=%x\n", ft->bpb->sectors_per_cluster*512);
     }
     freemem((unsigned long long)fsb);
     cns->puts("rc=%d mtas=%p\n", drv->files->rc, mtaskd::current);

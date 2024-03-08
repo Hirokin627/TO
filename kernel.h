@@ -181,6 +181,7 @@ class console{
     layer* l;
     int cx,cy;
 };
+class terminal;
 class task{
   public:
     task(unsigned long long ep);
@@ -189,6 +190,7 @@ class task{
     struct tc* ct;
     fifo* f;
     int cd;
+    terminal* tm;
 };
 class fifo{
   public:
@@ -277,6 +279,7 @@ class fat : public fs{
 class terminal{
   public:
     void m(task* t);
+    console* cns;
     task* tsk;
 };
 void memory_init(EFI_MEM* mems, unsigned long long dsize, unsigned long long bsize);
@@ -289,10 +292,14 @@ void freemem(addr_t addr);
 void set_idt(int n, unsigned long long offset, short sel, unsigned char attr);
 void pic_init();
 void sti();
+unsigned long long getpaddr(unsigned long long* p4, unsigned long long vaddr);
 file* fopen(const char* name);
+void allocpage(unsigned long long* p4, addr_t vaddr, addr_t paddr, size_t size, char flags);
+unsigned long long* makep4();
 void closef(file* f);
 dirent* opendir(const char* name);
 void closedir(dirent*);
+void api_init();
 void open_irq(char irq);
 namespace layerd{
   void init();
@@ -359,6 +366,7 @@ extern "C"{
   void io_out16(unsigned short, unsigned short);
   unsigned int readmsr(unsigned int id);
   unsigned int rflags();
+  void asmapihandle();
   void srflags(unsigned int);
   void switchcont(struct tc*, struct tc*);
   unsigned short io_in16(unsigned short);

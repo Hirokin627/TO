@@ -144,6 +144,7 @@ void mass::comp(struct transfertrb* t){
     initphase=8;
     drive* drv=new usbdrv(slot, id.binterfacenumber);
     drv->bpb=bpb;;
+    cns->puts("bpb=%x\n", bpb);
     //unsigned char dl=drvd::registdrv(5, slots[slot].port, id.binterfacenumber, drv);
     kernelbuf->write(6);
     kernelbuf->write(5);

@@ -37,7 +37,12 @@ void x64_init(){
     }
   }
   setcr3(op4);
-  set_idt(0x08, (unsigned long long)GPhandle, 8, 0x8e);
+  set_idt(0x00, (unsigned long long)GPhandle, 8, 0x8e);
+}
+unsigned long long* makep4(){
+  unsigned long long* ap4=(unsigned long long*)searchmem(8*512);
+  ap4[0]=op4[0];
+  return ap4;
 }
 void allocpagesub(unsigned long long* p4, addr_t vaddr, addr_t paddr, char flags){
   unsigned int p4p=(vaddr>>39)&0x1ff;
@@ -55,12 +60,12 @@ void allocpagesub(unsigned long long* p4, addr_t vaddr, addr_t paddr, char flags
     pe[pep]=searchmem(8*512)|flags;
   }
   if(pe[pep]&0x80){
-    unsigned long long base=pe[pep]&~0xfff;
+    /*unsigned long long base=pe[pep]&~0xfff;
     pe[pep]=searchmem(8*512)|flags;
     unsigned long long* pts=(unsigned long long*)(pe[pep]&~0xfff);
     for(unsigned int i=0;i<512;i++){
       pts[i]=base+i*0x1000|flags;
-    }
+    }*/
   }
   unsigned long long* pt=(unsigned long long*)(pe[pep]&~0xfff);
   unsigned int ptp=(vaddr>>12)&0x1ff;

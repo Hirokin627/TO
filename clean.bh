@@ -1,5 +1,11 @@
 #!/bin/sh -ex
 make clean
+for APP in $(ls apps/*/Makefile)
+do
+	ADIR=$(dirname $APP)
+	ANAME=$(basename $ADIR)
+	make -C $ADIR clean
+done
 : << 'COMMENT'
 echo "for DIR in $(ls apps/*/Makefile)"
 echo "do"

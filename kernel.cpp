@@ -59,6 +59,7 @@ extern "C" void nKernelmain(struct arg* ai){
   ia32=0x500;
   writemsr(0xc0000080, ia32);
   x64_init();
+  api_init();
   kernelbuf=new fifo(128);
   layerd::init();
   cns=new console(60, (scrysize)/16);

@@ -2,7 +2,7 @@ CPPFLAGS += -I. -D__SCLE
 CFLAGS   += -O2 -Wall -g --target=x86_64-elf -mcmodel=large
 CXXFLAGS += -O2 -Wall -g --target=x86_64-elf -mcmodel=large \
             -fno-exceptions -fno-rtti -std=c++17
-LDFLAGS += -z norelro --image-base 0xffff800000000000 --static
+LDFLAGS += -z norelro --image-base 0xffff800000000000 --static -entry main
 
 
 .PHONY: all
@@ -19,3 +19,6 @@ $(TARGET): $(OBJS) Makefile
 
 %.o: %.asm Makefile
 	nasm -f elf64 -o $@ $<
+clean:
+	rm -f *.o
+	rm -f $(TARGET)
