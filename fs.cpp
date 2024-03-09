@@ -121,8 +121,7 @@ file* fat::getf(const char* n, int dir){
   file* f=new file;
   int size=fe->filesize;
   if(size==0)size=1024;
-  cns->puts("filesize=%x\n", size);
-  f->ptr=(char*)searchmem((size+0xfff));
+  f->ptr=(char*)searchmem((size+0xfff)&~0xfff);
   f->base=f->ptr;
   f->size=fe->filesize;
   f->cnt=f->size;

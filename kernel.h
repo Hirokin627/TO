@@ -185,11 +185,16 @@ class terminal;
 class task{
   public:
     task(unsigned long long ep);
+    ~task(){
+      delete ct;
+    }
     void run();
     void sleep();
     struct tc* ct;
     fifo* f;
     int cd;
+    unsigned int flags;
+    task* parent;
     terminal* tm;
 };
 class fifo{

@@ -226,9 +226,11 @@ asmapihandle:
 	push rdx
 	push rcx
 	push rbx
-	sub rsp,8
+	push rax
+	sub rsp,0x40
 	mov rdi,rsp
 	call apibody
+	add rsp,0x40
 	add rsp,8
 	pop rbx
 	pop rcx

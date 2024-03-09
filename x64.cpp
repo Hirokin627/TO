@@ -40,8 +40,18 @@ void x64_init(){
   set_idt(0x00, (unsigned long long)GPhandle, 8, 0x8e);
 }
 unsigned long long* makep4(){
+  asm("cli");
   unsigned long long* ap4=(unsigned long long*)searchmem(8*512);
-  ap4[0]=op4[0];
+  unsigned long long* apd=(unsigned long long*)searchmem(8*512);
+  unsigned long long* ape=(unsigned long long*)searchmem(8*512*64);
+  ap4[0]=(unsigned long long)&apd[0]|3;
+  for(unsigned long long i=0;i<64;i++){
+    apd[i]=(unsigned long long)&ape[i*512]|3;
+    for(unsigned long long j=0;j<512;j++){
+      ape[i*512+j]=(i*0x40000000)+(j*0x200000)+0x83;
+    }
+  }
+  setcr3(ap4);
   return ap4;
 }
 void allocpagesub(unsigned long long* p4, addr_t vaddr, addr_t paddr, char flags){
@@ -60,12 +70,16 @@ void allocpagesub(unsigned long long* p4, addr_t vaddr, addr_t paddr, char flags
     pe[pep]=searchmem(8*512)|flags;
   }
   if(pe[pep]&0x80){
-    /*unsigned long long base=pe[pep]&~0xfff;
-    pe[pep]=searchmem(8*512)|flags;
-    unsigned long long* pts=(unsigned long long*)(pe[pep]&~0xfff);
+    cns->puts("PAGING ERROR\n");
+    unsigned long long base=pe[pep]&~0xfff;
+    cns->puts("pe=%p\n", base);
+    unsigned long long *npt=(unsigned long long*)searchmem(8*512);
     for(unsigned int i=0;i<512;i++){
-      pts[i]=base+i*0x1000|flags;
-    }*/
+      npt[i]=base+i*0x1000|flags;
+    }
+    pe[pep]=(unsigned long long)npt|flags;
+    cns->puts("new pt=%p\n", pe[pep]);
+    /**/
   }
   unsigned long long* pt=(unsigned long long*)(pe[pep]&~0xfff);
   unsigned int ptp=(vaddr>>12)&0x1ff;

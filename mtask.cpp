@@ -36,6 +36,7 @@ using namespace mtaskd;
 void task::run(){
   unsigned int r=rflags();
   asm("cli");
+  flags|=1;
   tasks->write((unsigned long long)this);
   srflags(r);
 }
@@ -43,12 +44,17 @@ void task::sleep(){
   unsigned int r=rflags();
   asm("cli");
   if(current==this){
+    flags&=~1;
     taskswitch(true);
   }else{
     int size=tasks->len;
     for(int i=0;i<size;i++){
       unsigned long long t=tasks->read();
-      if(t!=(unsigned long long)this)tasks->write(t);
+      if(t!=(unsigned long long)this){
+        tasks->write(t);
+      }else{
+        flags&=~1;
+      }
     }
   }
   srflags(r);

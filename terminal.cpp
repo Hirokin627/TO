@@ -5,6 +5,14 @@ namespace terminald{
     terminal* tm=new terminal;
     tm->m(tsk);
   }
+  void appcaller(unsigned long long rip, terminal* tm){
+    mtaskd::current->tm=tm;
+    typedef void ent();
+    ent* entry=(ent*)rip;
+    entry();
+    mtaskd::current->parent->run();
+    mtaskd::current->sleep();
+  }
 };
 void terminal::m(task* t){
   asm("cli");
@@ -25,8 +33,10 @@ void terminal::m(task* t){
   cns->l->slide(1, 1);
   char cmdl[60];
   int lp=0;
+  char runningapp=0;
   t->tm=this;
   cns->puts("test\n>");
+  cns->l->refresh();
   while(1){
     asm("cli");
     if(f->len==0){
@@ -92,16 +102,19 @@ void terminal::m(task* t){
             }else if(cmdl[0]!=0){
               file* f=fopen((const char*)cmdl);
               if(f){
+                asm("cli");
                 unsigned long long* backup=getcr3();
                 unsigned long long* ap4=(unsigned long long*)makep4();
                 allocpage(ap4, 0xffff800000000000, (unsigned long long)f->base, f->size, 7);
-                typedef void ent();
-                setcr3(ap4);
-                ent* entry=(ent*)*(unsigned long long*)((unsigned long long)f->base+24);
-                cns->puts("entry point:%p first b=%02x\n", entry, *(unsigned char*)entry);
-                asm("sti");
-                entry();
-                setcr3(backup);
+                task* at=new task((unsigned long long)terminald::appcaller);
+                at->ct->cr3=(unsigned long long)ap4;
+                at->ct->rdi=*(unsigned long long*)((unsigned long long)f->base+24);
+                at->ct->rsi=(unsigned long long)this;
+                at->parent=t;
+                runningapp=1;
+                at->run();
+                while(at->flags)t->sleep();
+                delete at;
                 closef(f);
               }else{
                 cns->puts("File not present\n");

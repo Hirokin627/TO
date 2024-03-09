@@ -2,7 +2,6 @@
 class system* sys;
 int main(int argc, char** argv){
   sys=new system;
-  sys->putc('A');
-  sys->puts("\nHIRO IS GOOD\n");
+  sys->getwin(200, 200);
   return 0;
 }

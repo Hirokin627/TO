@@ -8,7 +8,7 @@ namespace layerd{
     sb=(int*)searchmem(4*scrxsize*scrysize);
     layer* bl=new layer(scrxsize,scrysize);
     bl->col_inv=-1;
-    graphic::drawbox(bl, 0x39b8ff, 0, 0, scrxsize-1, scrysize-1);
+    graphic::drawbox(bl, 0xcc2528, 0, 0, scrxsize-1, scrysize-1);
     graphic::drawbox(bl, 0xc6c6c6, 0, scrysize-28, scrxsize-1, scrysize-28);
     graphic::drawbox(bl, 0xffffff, 0, scrysize-27, scrxsize-1, scrysize-27);
     graphic::drawbox(bl, 0xc6c6c6, 0, scrysize-26, scrxsize-1, scrysize-1);
@@ -60,7 +60,6 @@ namespace layerd{
   void refreshsub(int x0, int y0, int x1, int y1){
     //trefreshsub(x0, y0, x1, y1);
     if(mtaskd::mt&&(mtaskd::current!=ta)){
-      asm("cli");
       kernelbuf->write(7);
       kernelbuf->write(x0);
       kernelbuf->write(y0);
