@@ -8,7 +8,11 @@ namespace layerd{
     sb=(int*)searchmem(4*scrxsize*scrysize);
     layer* bl=new layer(scrxsize,scrysize);
     bl->col_inv=-1;
-    graphic::drawbox(bl, 0xcc2528, 0, 0, scrxsize-1, scrysize-1);
+    for(int i=0;i<scrxsize*scrysize;i++){
+      bl->buf[i]=((255*i/scrxsize/scrysize)*0x10001)<<0;
+      bl->buf[i]|=((255-(255*i/scrxsize/scrysize))*0x101)<<0;
+    }
+    //graphic::drawbox(bl, 0xcc2528, 0, 0, scrxsize-1, scrysize-1);
     graphic::drawbox(bl, 0xc6c6c6, 0, scrysize-28, scrxsize-1, scrysize-28);
     graphic::drawbox(bl, 0xffffff, 0, scrysize-27, scrxsize-1, scrysize-27);
     graphic::drawbox(bl, 0xc6c6c6, 0, scrysize-26, scrxsize-1, scrysize-1);
@@ -100,6 +104,7 @@ void layer::updown(int nheight){
     int noff=nheight;
     nheight+=master->height;
     if(old>=master->height)nheight++;
+    if(master->height==-1)nheight=-1;
   }
   if(old<nheight){
     if(old>=0){
@@ -161,4 +166,9 @@ void layer::slide(int nx, int ny){
   }
   refreshsub(oldx, oldy, oldx+bxsize, oldy+bysize);
   refresh();
+}
+layer::~layer(){
+  updown(-1);
+  freemem((unsigned long long)buf);
+  for(int i=0;i<manye;i++)delete slaves[i];
 }

@@ -66,6 +66,8 @@ extern "C" void nKernelmain(struct arg* ai){
   pci::init();
   pic_init();
   asm("sti");
+  ided::init();
+  satad::init();
   cns->puts("MSR=%x\n", readmsr(0xc0000080));
   ps2::init();
   taskb.cr3=(unsigned long long)getcr3();
@@ -270,6 +272,13 @@ extern "C" void nKernelmain(struct arg* ai){
         int x1=kernelbuf->read();
         int y1=kernelbuf->read();
         layerd::trefreshsub(x0, y0, x1, y1);
+      }else if(q==8){
+        terminal* tm=(terminal*)kernelbuf->read();
+        tm->tsk->sleep();
+        delete tm->cns;
+        delete tm->tsk;
+        delete tm->w;
+        delete tm;
       }
     }
   }

@@ -154,6 +154,7 @@ union keybd{
 class layer{
   public:
     layer(int xsize, int ysize);
+    ~layer();
     void updown(int h);
     void refresh();
     void refreshconfro(int,int,int,int);
@@ -173,6 +174,9 @@ class layer{
 class console{
   public:
     console(int line, int row);
+    ~console(){
+      delete l;
+    }
     void putc(char chr, bool nf=true);
     void putsns(const char* str);
     void puts(const char* format,...);
@@ -182,14 +186,18 @@ class console{
     int cx,cy;
 };
 class terminal;
+void freemem(addr_t addr);
 class task{
   public:
     task(unsigned long long ep);
     ~task(){
+      freemem(irsp);
       delete ct;
     }
     void run();
     void sleep();
+    unsigned long long brsp;
+    unsigned long long irsp;
     struct tc* ct;
     fifo* f;
     int cd;
@@ -285,6 +293,7 @@ class terminal{
   public:
     void m(task* t);
     console* cns;
+    window* w;
     task* tsk;
 };
 void memory_init(EFI_MEM* mems, unsigned long long dsize, unsigned long long bsize);
@@ -293,7 +302,6 @@ unsigned long long getpaddr(unsigned long long* p4, unsigned long long vaddr);
 unsigned long long searchmem(size_t size);
 void allocpage(unsigned long long* p4, addr_t vaddr, addr_t paddr, size_t size, char flags);
 void cli();
-void freemem(addr_t addr);
 void set_idt(int n, unsigned long long offset, short sel, unsigned char attr);
 void pic_init();
 void sti();
@@ -303,6 +311,7 @@ void allocpage(unsigned long long* p4, addr_t vaddr, addr_t paddr, size_t size, 
 unsigned long long* makep4();
 void closef(file* f);
 dirent* opendir(const char* name);
+void breakp4(unsigned long long* ap4);
 void closedir(dirent*);
 void api_init();
 void open_irq(char irq);
@@ -359,6 +368,12 @@ namespace fsd{
 namespace terminald{
   void main(task* tsk);
 };
+namespace satad{
+  void init();
+};
+namespace ided{
+  void init();
+};
 extern "C"{
   void setcr3(unsigned long long*);
   unsigned long long* getcr3();
@@ -376,6 +391,8 @@ extern "C"{
   void switchcont(struct tc*, struct tc*);
   unsigned short io_in16(unsigned short);
   unsigned long long getcr4();
+  void jumpasapp(int argc, char** argv, unsigned long long rip, task* tsk);
   void setcr4(unsigned long long data);
+  void setr10withhlt(unsigned long long data);
   void writemsr(unsigned int id, unsigned int data);
 };

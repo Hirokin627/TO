@@ -23,8 +23,8 @@ window::window(int cxsize, int cysize){
   cs->wc=this;
   graphic::drawbox(cs, 0xc6c6c6, 0, 0, cxsize-2, cysize-1);
   cs->updown(layerd::top);
-  cs->slide(2, 21);
-  edge=new layer(cxsize+4, cysize+3+20);
+  cs->slide(1, 21);
+  edge=new layer(cxsize+2, cysize+3+20);
   edge->col_inv=-1;
   edge->flags|=ITS_WINDOW;
   int x=edge->bxsize;
@@ -42,7 +42,7 @@ window::window(int cxsize, int cysize){
   graphic::drawbox(edge, 0x000000, 0, y-1, x-1, y-1);
   edge->updown(cs->height+1);
   cs->registss(edge);
-  tb=new layer(cxsize-2, 20);
+  tb=new layer(cxsize-4, 20);
   tb->flags|=ITS_WINDOW|ITS_TB;
   tb->col_inv=-1;
   graphic::drawbox(tb, 0x84, 0, 0, tb->bxsize-1, tb->bysize-1);

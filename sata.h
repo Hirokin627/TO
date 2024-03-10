@@ -1,0 +1,40 @@
+struct sata_mmio{
+  struct {
+    unsigned int cap;
+    unsigned int ghc;
+    unsigned int is;
+    unsigned int pi;
+    unsigned int vs;
+    unsigned int ccc_ctl;
+    unsigned int ccc_ports;
+    unsigned int em_loc;
+    unsigned int em_ctl;
+    unsigned int cap2;
+    unsigned int bohc;
+  }__attribute__((packed)) ghc;
+  unsigned char rsv0[0x5f-0x2c+1];
+  unsigned char rsv1[0x9f-0x60+1];
+  unsigned char vendor0[0xff-0xa0+1];
+  struct {
+    unsigned int pxclb;
+    unsigned int pxclbu;
+    unsigned int pxfb;
+    unsigned int pxfbu;
+    unsigned int pxis;
+    unsigned int pxie;
+    unsigned int pxcmd;
+    unsigned char rsv[0x1f-0x1c+1];
+    unsigned int pxtfd;
+    unsigned int pxsig;
+    unsigned int pxssts;
+    unsigned int pxsctl;
+    unsigned int pxserr;
+    unsigned int pxsact;
+    unsigned int pxci;
+    unsigned int pxsntf;
+    unsigned int pxfbs;
+    unsigned int pxdevslp;
+    unsigned char rsv1[0x6f-0x48+1];
+    unsigned int pxvs;
+  }__attribute__((packed)) portc[0];
+};

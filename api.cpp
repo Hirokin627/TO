@@ -12,11 +12,14 @@ extern "C" unsigned long long apibody(struct tc* ct){
   }else if(ct->rax==2){
     unsigned long long size=(ct->rdi+0xfff)&~0xfff;
     unsigned long long addr=searchmem(size);
-    allocpage(getcr3(), addr, addr, size, 7);
     return addr;
+    allocpage(getcr3(), addr, addr, size, 7);
   }else if(ct->rax==3){
     window* w=new window(ct->rdi, ct->rsi);
+    initsheet(w->cs);
     return (unsigned long long)w;
+  }else if(ct->rax==4){
+    return mtaskd::current->brsp;
   }
   return 0;
 }

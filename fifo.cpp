@@ -7,15 +7,16 @@ fifo::fifo(int sz, task* t){
   tsk=t;
 }
 void fifo::write(unsigned long long d){
+  asm("cli");
   if(!lock){
     lock=1;
     datas[wp]=d;
     wp++;
     if(wp==size)wp=0;
     len++;
+    lock=0;
     //if(len==size)asm("cli\nhlt");
     if(tsk)tsk->run();
-    lock=0;
   }else{
     cns->puts("FIFO LOCK ERROR\n");
     asm("cli\nhlt");

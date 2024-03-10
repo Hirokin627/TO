@@ -66,6 +66,7 @@ task::task(unsigned long long rip){
   ct->ss=0x10;
   ct->rflags=0x202;
   ct->rsp=searchmem(1024)+1024-8;
+  irsp=ct->rsp-0xffff8;
   ct->cr3=(unsigned long long)getcr3();
   *(unsigned int*)&ct->fx_area[24]=0x1f80;
   cd=drvd::drvs[bdl]->files->rc;

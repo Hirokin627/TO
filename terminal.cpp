@@ -6,12 +6,7 @@ namespace terminald{
     tm->m(tsk);
   }
   void appcaller(unsigned long long rip, terminal* tm){
-    mtaskd::current->tm=tm;
-    typedef void ent();
-    ent* entry=(ent*)rip;
-    entry();
-    mtaskd::current->parent->run();
-    mtaskd::current->sleep();
+    
   }
 };
 void terminal::m(task* t){
@@ -20,17 +15,17 @@ void terminal::m(task* t){
   tsk=t;
   int line=60;
   int rows=15;
-  window* w=new window(line*8, rows*16);
+  w=new window(line*8+2, rows*16+2);
   w->owner=t;
   //cns->puts("terminal started\n");
-  graphic::drawbox(w->cs, 0, 0, 0, w->cs->bxsize-1, w->cs->bysize-1);
+  graphic::drawbox(w->cs, 0, 2, 2, w->cs->bxsize-3, w->cs->bysize-2);
   timer* tm=new timer;
   fifo* f=t->f;
   cns=new console(line, rows);
   cns->l->updown(layerd::top-1);
   cns->l->flags|=ITS_WINDOW;
   w->cs->registss(cns->l);
-  cns->l->slide(1, 1);
+  cns->l->slide(1, 2);
   char cmdl[60];
   int lp=0;
   char runningapp=0;
@@ -99,22 +94,33 @@ void terminal::m(task* t){
               }else{
                 cns->puts("File not found\n");
               }
+            }else if(!strcmp((const char*)cmdl, "exit")){
+              asm("cli");
+              delete w->cs; 
+              kernelbuf->write(8);
+              kernelbuf->write((unsigned long long)tm);
             }else if(cmdl[0]!=0){
               file* f=fopen((const char*)cmdl);
               if(f){
                 asm("cli");
                 unsigned long long* backup=getcr3();
                 unsigned long long* ap4=(unsigned long long*)makep4();
+                unsigned long long as=searchmem(1024*1024);
+                allocpage(ap4, 0xffffff8000000000, as, 1024*1024, 7);
                 allocpage(ap4, 0xffff800000000000, (unsigned long long)f->base, f->size, 7);
-                task* at=new task((unsigned long long)terminald::appcaller);
+                /*task* at=new task((unsigned long long)terminald::appcaller);
                 at->ct->cr3=(unsigned long long)ap4;
                 at->ct->rdi=*(unsigned long long*)((unsigned long long)f->base+24);
                 at->ct->rsi=(unsigned long long)this;
                 at->parent=t;
-                runningapp=1;
-                at->run();
-                while(at->flags)t->sleep();
-                delete at;
+                at->run();*/
+                asm("cli");
+                setcr3(ap4);
+                unsigned long long isp=searchmem(1024*1024);
+                *(unsigned long long*)4=isp+0xffff8;
+                jumpasapp(0, 0, (unsigned long long)*(unsigned long long*)((unsigned long long)f->base+24), mtaskd::current);
+                setcr3(backup);
+                breakp4(ap4);
                 closef(f);
               }else{
                 cns->puts("File not present\n");

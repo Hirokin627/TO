@@ -16,6 +16,9 @@ class system{
     unsigned long long getwin(int xsize, int ysize){
       return asmgetwin(xsize, ysize);
     }
+    void exit(){
+      asm("mov $4,%rax\nint $0x40");
+    }
 };
 typedef unsigned long size_t;
 void* operator new(size_t size){

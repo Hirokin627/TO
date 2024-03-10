@@ -1,7 +1,7 @@
 #include "kernel.h"
 unsigned char bitmap[0x20000];
 const size_t last_addr=sizeof(bitmap)*8*4096;
-struct alloclist al[256];
+struct alloclist al[90*512];
 int alp=0;
 char getbit(int addr){
   unsigned char b=bitmap[addr/8];
@@ -61,7 +61,9 @@ unsigned long long searchmem(size_t size){
         al[alp].addr=b*4096;
         al[alp].size=bsize*0x1000;
         alp++;
-        mymemset((void*)(b*4096), size, 0);
+        for(size_t j=0;j<bsize*4096;j++){
+          *(unsigned char*)((unsigned long long)b*4096+j)=0;
+        }
         return b*4096;
       }
     }else{
@@ -80,7 +82,7 @@ void freemem(addr_t addr){
       break;
     }
   }
-  if(size==-1)setcr3(0);
+  if(size==-1)return;
   for(int j=i;j<alp-1;j++){
     al[j]=al[j+1];
   }
