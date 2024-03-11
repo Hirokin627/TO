@@ -13,6 +13,7 @@ void terminal::m(task* t){
   asm("cli");
   //cns->puts("terminal called\n");
   tsk=t;
+  t->tm=this;
   int line=60;
   int rows=15;
   w=new window(line*8+2, rows*16+2);
@@ -54,6 +55,7 @@ void terminal::m(task* t){
                 if(ma==1)f_arg=&cmdl[i+1];
               }
             }
+            if(cmdl[lp-1]==0)lp--;
             if(!strcmp((const char*)cmdl, "ls")){
               const char* dp=".";
               if(f_arg!=cmdl)dp=(const char*)f_arg;
@@ -102,25 +104,37 @@ void terminal::m(task* t){
             }else if(cmdl[0]!=0){
               file* f=fopen((const char*)cmdl);
               if(f){
-                asm("cli");
-                unsigned long long* backup=getcr3();
-                unsigned long long* ap4=(unsigned long long*)makep4();
-                unsigned long long as=searchmem(1024*1024);
-                allocpage(ap4, 0xffffff8000000000, as, 1024*1024, 7);
-                allocpage(ap4, 0xffff800000000000, (unsigned long long)f->base, f->size, 7);
-                /*task* at=new task((unsigned long long)terminald::appcaller);
-                at->ct->cr3=(unsigned long long)ap4;
-                at->ct->rdi=*(unsigned long long*)((unsigned long long)f->base+24);
-                at->ct->rsi=(unsigned long long)this;
-                at->parent=t;
-                at->run();*/
-                asm("cli");
-                setcr3(ap4);
-                unsigned long long isp=searchmem(1024*1024);
-                *(unsigned long long*)4=isp+0xffff8;
-                jumpasapp(0, 0, (unsigned long long)*(unsigned long long*)((unsigned long long)f->base+24), mtaskd::current);
-                setcr3(backup);
-                breakp4(ap4);
+                if(f->base[0]==0x7f){
+                  asm("cli");
+                  unsigned long long* backup=getcr3();
+                  unsigned long long* ap4=(unsigned long long*)makep4();
+                  unsigned long long as=searchmem(1024*1024);
+                  allocpage(ap4, 0xffffff8000000000, as, 1024*1024, 7);
+                  allocpage(ap4, 0xffff800000000000, (unsigned long long)f->base, f->size, 7);
+                  allocpage(ap4, (unsigned long long)cmdl, (unsigned long long)cmdl, 60, 7); 
+                  int argc=1;
+                  char* argv[30];
+                  if(cmdl!=f_arg){
+                    for(int i=0;i<lp;i++){
+                      if(cmdl[i]==0){
+                        argv[argc]=&cmdl[i+1];
+                        argc++;
+                      }
+                    }
+                  }
+                  argv[0]=cmdl;
+                  asm("cli");
+                  setcr3(ap4);
+                  unsigned long long isp=searchmem(1024*1024);
+                  mtaskd::current->alp=0;
+                  *(unsigned long long*)4=isp+0xffff8;
+                  jumpasapp(argc, argv, (unsigned long long)*(unsigned long long*)((unsigned long long)f->base+24), mtaskd::current);
+                  setcr3(backup);
+                  breakp4(ap4);
+                  freemem((unsigned long long)isp);
+                }else{
+                  cns->puts("this is not app (first byte:%02x)\n", f->base[0]);
+                }
                 closef(f);
               }else{
                 cns->puts("File not present\n");

@@ -57,7 +57,6 @@ void task::sleep(){
       }
     }
   }
-  srflags(r);
 }
 task::task(unsigned long long rip){
   ct=new struct tc;

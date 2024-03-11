@@ -168,6 +168,7 @@ void layer::slide(int nx, int ny){
   refresh();
 }
 layer::~layer(){
+  if(wc&&nowb==wc)nowb=0;
   updown(-1);
   freemem((unsigned long long)buf);
   for(int i=0;i<manye;i++)delete slaves[i];

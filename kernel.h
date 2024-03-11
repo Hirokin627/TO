@@ -16,6 +16,7 @@ typedef enum {
  EfiPersistentMemory,
  EfiMaxMemoryType
 } EFI_MEMORY_TYPE;
+extern unsigned long long op4[512];
 typedef struct {
   unsigned char Type;
   unsigned char SubType;
@@ -29,6 +30,7 @@ typedef struct {
 #define ITS_WINDOW 2
 #define ITS_CS 4
 #define ITS_TB 8
+#define ITS_MADE_FOR_APP 16
 class console;
 class fifo;
 class task;
@@ -204,6 +206,8 @@ class task{
     unsigned int flags;
     task* parent;
     terminal* tm;
+    struct alloclist al[200];
+    int alp;
 };
 class fifo{
   public:

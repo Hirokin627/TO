@@ -198,9 +198,10 @@ void mass::comp(struct transfertrb* t){
   }
 }
 void mass::read(unsigned char* buf, unsigned int cnt, unsigned int lba){
-  /*while(initphase!=8){
-    asm("sti\nhlt");
-  }*/
+  //while(initphase!=8){
+  //  asm("sti\nhlt");
+  //}
+  asm("cli");
   //srflags(r);
   initphase=5;
   tb=buf;
@@ -221,13 +222,14 @@ void mass::read(unsigned char* buf, unsigned int cnt, unsigned int lba){
   db[slot]=bulkout;
   while(initphase!=8){
     posthandle();
-    asm("sti");
+    asm("cli");
   }
   //srflags(r);
 }
 void mass::write(unsigned char* buf, unsigned int cnt, unsigned int lba){
   unsigned int r=rflags();
   //while(initphase!=8)asm("sti");
+  asm("cli");
   initphase=5;
   tb=buf;
   struct CBW* cbw=mycbw;
@@ -247,7 +249,7 @@ void mass::write(unsigned char* buf, unsigned int cnt, unsigned int lba){
   db[slot]=bulkout;
   while(initphase!=8){
     posthandle();
-    asm("sti");
+    asm("cli");
   }
   //srflags(r);
 }

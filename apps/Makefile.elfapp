@@ -3,18 +3,18 @@ CFLAGS   += -O2 -Wall -g --target=x86_64-elf -mcmodel=large
 CXXFLAGS += -O2 -Wall -g --target=x86_64-elf -mcmodel=large \
             -fno-exceptions -fno-rtti -std=c++17
 LDFLAGS += -z norelro --image-base 0xffff800000000000 --static -entry main
-OBJS	+= ../api/api.o
+OBJS	+= ../api/api.o ../api/apic.o
 
 .PHONY: all
 all: $(TARGET)
 
-$(TARGET): $(OBJS) Makefile
+$(TARGET): $(OBJS) Makefile 
 	ld.lld $(LDFLAGS) -o $@ $(OBJS) -lc -lc++ -lc++abi -lm
 
 %.o: %.c Makefile
 	clang $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
-%.o: %.cpp Makefile
+%.o: %.cpp Makefile ../api/api.h
 	clang++ $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 %.o: %.asm Makefile

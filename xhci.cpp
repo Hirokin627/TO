@@ -422,12 +422,7 @@ namespace xhci{
     }
   }
   void posthandle(){
-  //*(unsigned int*)0xfee000b0=0;
-  unsigned int usbcmd=ope->usbsts;
-  if(usbcmd&0x1000){
-    //cns->puts("xHC ERROR\n");
-    asm("cli\nhlt");
-  }
+  asm("cli");
   struct TRB* erdp=(struct TRB*)(rr->ir[0].erdp&~0xf);
   while(erdp->c==c){
     struct TRB t=*erdp;

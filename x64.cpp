@@ -14,15 +14,16 @@ struct iframe{
   unsigned long long rip;
 }__attribute__((packed));
 __attribute__((interrupt)) void GPhandle(iframe* f, unsigned long long ec){
-  *(unsigned long long*)12=f->rip;
-  return;
   for(int i=0;i<scrxsize*scrysize;i++)vram[i]=0x237dff;
+  *(unsigned long long*)12=f->rip;
+  setr10withhlt(f->rip);
+  asm("cli\nhlt");
+  return;
   layer l{400, 400};
   l.bxsize=scrxsize;
   l.bysize=scrysize;
   l.buf=(unsigned int*)vram;
   graphic::putfont(&l, 0xffffff, 0, 0, 'A', false);
-  setr10withhlt(f->rip);
   asm("cli\nhlt");
 }
 void set_idt(int n, unsigned long long offset, short sel, unsigned char attr){

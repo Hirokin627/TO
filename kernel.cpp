@@ -187,11 +187,18 @@ extern "C" void nKernelmain(struct arg* ai){
         asm("sti");
       }else if(q==2){
         unsigned char k=kernelbuf->read();
-        asm("sti");
         if(nowb){
           if(nowb->owner){
-            nowb->owner->f->write(2);
-            nowb->owner->f->write(k);
+            if(!(nowb->cs->flags&ITS_MADE_FOR_APP)){
+              if(k!=0x4f){
+                nowb->owner->f->write(2);
+                nowb->owner->f->write(k);
+              }else{
+                delete nowb->owner->tm->w->cs;
+                kernelbuf->write(8);
+                kernelbuf->write((unsigned long long)nowb->owner->tm);
+              }
+            }
           }
         }else{
           if(k==1){

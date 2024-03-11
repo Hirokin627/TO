@@ -19,3 +19,18 @@ asmgetwin
 	mov rax,3
 	int 0x40
 	ret
+global asm_fopen
+asm_fopen:
+	mov rax,5
+	int 0x40
+	ret
+global closef
+closef:
+	mov rax,6
+	int 0x40
+	ret
+global free
+free:
+	mov rax,7
+	int 0x40
+	ret
