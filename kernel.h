@@ -247,6 +247,7 @@ class drive{
     virtual void write(unsigned char* buf, unsigned int cnt, unsigned int lba512){
     };
     unsigned int bpb;
+    unsigned int type;
     fs* files;
 };
 class mass;
@@ -256,6 +257,12 @@ class usbdrv : public drive{
     void read(unsigned char* buf, unsigned int cnt, unsigned int lba512) override;
     void write(unsigned char* buf, unsigned int cnt, unsigned int lba512) override;
     mass* intf;
+};
+class idedrv: public drive{
+  public:
+    idedrv(unsigned char addr);
+    void read(unsigned char* buf, unsigned int cnt, unsigned int lba512) override;
+    unsigned char addr;
 };
 class fs{
   public:

@@ -255,6 +255,7 @@ void mass::write(unsigned char* buf, unsigned int cnt, unsigned int lba){
 }
 usbdrv::usbdrv(unsigned char slot, unsigned char interface){
   intf=(mass*)drivers[slot][interface];
+  type=5;
 }
 void usbdrv::read(unsigned char* buf, unsigned int cnt, unsigned int lba){
   unsigned char tb[2048];

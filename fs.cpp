@@ -203,20 +203,22 @@ namespace fsd{
   }
   void recognizefs(unsigned char d){
     drive* drv=drvd::drvs[d];
-    unsigned char* fsb=(unsigned char*)searchmem(drv->bpb);
+    unsigned char* fsb=(unsigned char*)searchmem(512);
     drv->read(fsb, 1, 0);
     if(!strncmp((const char*)&fsb[0x52], "FAT32", 5)){
       drv->files=new fat;
       fat* ft=(fat*)drv->files;
       drv->files->init(drv);
       cns->puts("bpc=%x\n", ft->bpb->sectors_per_cluster*512);
+    }else{
+      cns->puts("FS not recognized\n");
     }
     freemem((unsigned long long)fsb);
     cns->puts("rc=%d mtas=%p\n", drv->files->rc, mtaskd::current);
     mtaskd::current->cd=drv->files->rc;
   }
 };
-void setmustdir(unsigned char* dl, char** path, int* dn, const char* n,char ddl=bdl){
+int setmustdir(unsigned char* dl, char** path, int* dn, const char* n,char ddl=bdl){
   //cns->puts("bdl=%c\n", ddl);
   int sd=mtaskd::current->cd;
   fs* s=drvd::drvs[ddl]->files;
@@ -245,7 +247,7 @@ void setmustdir(unsigned char* dl, char** path, int* dn, const char* n,char ddl=
     //cns->puts("nd=%d\n", nd);
     if(nd==-1){
       //cns->puts("invalid\n");
-      return;
+      return -1;
     }
     sd=nd;
   }
@@ -255,13 +257,14 @@ void setmustdir(unsigned char* dl, char** path, int* dn, const char* n,char ddl=
   *dl=d;
   *path=pth;
   *dn=sd;
+  return 0;
 }
 file* fopen(const char* name){
   char* n;
   fs* files;
   unsigned char dl;
   int dn;
-  setmustdir(&dl, &n, &dn, name);  
+  if(setmustdir(&dl, &n, &dn, name))return 0;;  
   //cns->puts("recieve data\ndl=%c pth=%s dir=%d\n", dl, n, dn);
   files=drvd::drvs[dl]->files;
   file* f=files->getf((const char*)n, dn);
@@ -276,7 +279,7 @@ dirent* opendir(const char* name){
   fs* files;
   unsigned char dl;
   int dn;
-  setmustdir(&dl, &n, &dn, name);
+  if(setmustdir(&dl, &n, &dn, name))return 0;;
   files=drvd::drvs[dl]->files;
   dirent* de=files->getd(n, dn);
   freemem((unsigned long long)n);

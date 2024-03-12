@@ -31,7 +31,7 @@ void terminal::m(task* t){
   int lp=0;
   char runningapp=0;
   t->tm=this;
-  cns->puts("test\n>");
+  cns->puts(">");
   cns->l->refresh();
   while(1){
     asm("cli");
@@ -85,7 +85,13 @@ void terminal::m(task* t){
                   t->cd=dn;
                 }
               }
-            }else if(!strcmp((const char*)cmdl, "cat")){
+            }else if(!strcmp((const char*)cmdl, "lsd")){
+              for(unsigned int i=0;i<0xff;i++){
+                if(drvd::drvs[i]){
+                  cns->puts("Drive %c: type:%d\n", i, drvd::drvs[i]->type);
+                }
+              }
+            }/*else if(!strcmp((const char*)cmdl, "cat")){
               file* f=fopen((const char*)f_arg);
               if(f){
                 for(int i=0;i<f->size;i++){
@@ -96,11 +102,14 @@ void terminal::m(task* t){
               }else{
                 cns->puts("File not found\n");
               }
-            }else if(!strcmp((const char*)cmdl, "exit")){
+            }*/else if(!strcmp((const char*)cmdl, "exit")){
               asm("cli");
               delete w->cs; 
               kernelbuf->write(8);
               kernelbuf->write((unsigned long long)tm);
+            }else if(!strcmp((const char*)cmdl, "clear")){
+              graphic::drawbox(cns->l, cns->l->col_inv, 0, 0, cns->l->bxsize-1, cns->l->bysize-1);
+              cns->cx=cns->cy=0;
             }else if(cmdl[0]!=0){
               file* f=fopen((const char*)cmdl);
               if(f){

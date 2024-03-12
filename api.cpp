@@ -3,7 +3,7 @@ void initsheet(layer* l){
   allocpage(getcr3(), (unsigned long long)l->buf, (unsigned long long)l->buf, 4*l->bxsize*l->bysize, 7);
 }
 extern "C" unsigned long long apibody(struct tc* ct){
-  asm("cli");
+  //asm("cli");
   if(ct->rax==0){
     mtaskd::current->tm->cns->putc(ct->rdi);
   }else if(ct->rax==1){

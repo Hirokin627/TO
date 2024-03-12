@@ -41,7 +41,7 @@ void testt(){
   }
 }
 unsigned char dp[44];
-unsigned char bdl;
+unsigned char bdl=0;
 EFI_DEVICE_PATH_PROTOCOL* bdpp=(EFI_DEVICE_PATH_PROTOCOL*)dp;
 task* ta;
 extern "C" void nKernelmain(struct arg* ai){
