@@ -24,12 +24,24 @@ void fat::readclus(unsigned char* buf, int cnt, int clus){
     }
   }
 }
+void fat::writeclus(unsigned char* buf, int cnt, int clus){
+  for(int i=0;i<cnt;i++){
+    for(int j=0;j<bpb->sectors_per_cluster;j++){
+      dv->write(&buf[i*512*bpb->sectors_per_cluster+j*512], 1, calcclus(clus+i)+j);
+    }
+  }
+}
 int fat::readfat(int ind){
   if(ff[ind/0x80]==0){
     dv->read((unsigned char*)&fats[ind&~0x7f], 1, bpb->reserved_sector_count+(ind/0x80));
     ff[ind/0x80]=1;
   }
   return fats[ind];
+}
+void fat::writefat(int ind, int d){
+  readfat(ind);
+  fats[ind]=d;
+  dv->write((unsigned char*)&fats[ind&~0x7f], 1, bpb->reserved_sector_count+(ind/0x80));
 }
 int fat::getchainsize(int clus){
   int size=bpb->sectors_per_cluster*512;

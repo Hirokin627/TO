@@ -262,12 +262,16 @@ class idedrv: public drive{
   public:
     idedrv(unsigned char addr);
     void read(unsigned char* buf, unsigned int cnt, unsigned int lba512) override;
+    void write(unsigned char* buf, unsigned int cnt, unsigned int lba512) override;
     unsigned char addr;
 };
 class fs{
   public:
     virtual file* getf(const char* n, int dn){
       return 0;
+    };
+    virtual void writef(file* f){
+      
     };
     virtual dirent* getd(const char* n, int dn){
       return 0;
@@ -288,8 +292,11 @@ class fat : public fs{
     int calcclus(int clus);
     struct fat_ent* getintdir(int clus);
     int readfat(int ind);
+    void writefat(int ind, int d);
     void readclus(unsigned char* buf, int cnt, int clus);
+    void writeclus(unsigned char* buf, int cnt, int clus);
     void readcluschain(unsigned char* buf, int clus);
+    void writecluschain(unsigned char* buf, int clus, int size);
     struct fat_ent* search_intent(const char* name, int dir);
     int getchainsize(int clus);
     file* getf(const char* n, int dir) override;
@@ -303,6 +310,7 @@ class fat : public fs{
 class terminal{
   public:
     void m(task* t);
+    char getc();
     console* cns;
     window* w;
     task* tsk;

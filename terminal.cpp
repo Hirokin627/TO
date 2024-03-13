@@ -9,6 +9,21 @@ namespace terminald{
     
   }
 };
+char terminal::getc(){
+  task* t=tsk;
+  while(1){
+    asm("cli");
+    if(t->f->len==0){
+      t->sleep();
+    }else{
+      unsigned int q=t->f->read();
+      if(q==2){
+        char k=t->f->read();
+        if(!(k&0x80))return k;
+      }
+    }
+  }
+}
 void terminal::m(task* t){
   asm("cli");
   //cns->puts("terminal called\n");
@@ -110,6 +125,33 @@ void terminal::m(task* t){
             }else if(!strcmp((const char*)cmdl, "clear")){
               graphic::drawbox(cns->l, cns->l->col_inv, 0, 0, cns->l->bxsize-1, cns->l->bysize-1);
               cns->cx=cns->cy=0;
+            }else if(!strcmp((const char*)cmdl, "install")){
+              cns->puts("select drive:\n");
+              for(int i=0;i<256;i++){
+                if(drvd::drvs[i]&&bdl!=i){
+                  cns->puts("%c: ", i);
+                }
+              }
+              cns->nline();
+              char d=keytable0[getc()]-0x20;
+              cns->puts("Selected: %c\n", d);
+              drive* nd=drvd::drvs[d];
+              drive* bd=drvd::drvs[bdl];
+              unsigned char* b=(unsigned char*)searchmem(512);
+              for(int i=0;i<0x20;i++){
+                bd->read(b, 1, i);
+                nd->write(b, 1, i);
+              }
+              freemem((unsigned long long)b);
+              struct BPB* bpb=(struct BPB*)searchmem(512);
+              bd->read((unsigned char*)bpb, 1, 0);
+              unsigned int* ft=(unsigned int*)searchmem(bpb->fat_size_32*512);
+              ft[0]=0xffffff8;
+              ft[1]=0xfffffff;
+              for(int i=0;i<bpb->fat_size_32;i++){
+                nd->write((unsigned char*)&ft[i*0x80], 1, bpb->reserved_sector_count+i);
+              }
+              freemem((unsigned long long)ft);
             }else if(cmdl[0]!=0){
               file* f=fopen((const char*)cmdl);
               if(f){
