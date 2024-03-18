@@ -48,6 +48,7 @@ void reservmem(addr_t addr, size_t size){
   }
 }
 unsigned long long searchmem(size_t size){ 
+  //asm("cli");
   size_t bsize=(size+0xfff)/0x1000;
   unsigned long long c=0,b=0;
   for(unsigned int i=0;i<sizeof(bitmap)*8;i++){

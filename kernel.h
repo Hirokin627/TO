@@ -61,6 +61,7 @@ struct IDT{
 typedef struct {
 char drv;
 char* ptr;
+char written;
 int cnt;
 int size;
 char* base;
@@ -114,6 +115,10 @@ struct fat_ent{
 	short wtd;
 	short clus_l;
 	int filesize;
+	
+	unsigned char getclus(){
+	  return (clus_h<<16)|clus_l;
+	}
 }__attribute__((packed));
 struct fat_lent{
 	char ord;
@@ -267,45 +272,46 @@ class idedrv: public drive{
 };
 class fs{
   public:
-    virtual file* getf(const char* n, int dn){
-      return 0;
-    };
-    virtual void writef(file* f){
+    virtual void init(drive* drv){
       
     };
-    virtual dirent* getd(const char* n, int dn){
-      return 0;
+    virtual void preparecluschain(unsigned int clus){
     };
-    virtual int getdn(const char* n, int dn){
+    virtual unsigned int calcblock(unsigned int clus){
       return -1;
     };
-    virtual void init(drive* d){
-      
+    virtual unsigned char* getclusaddr(unsigned int clus){
+      return 0;
+    };
+    virtual struct fat_ent* getd(const char* n, int dn){
+      return 0;
+    };
+    virtual unsigned int getfat(unsigned int ind){
+      return 0;
+    };
+    virtual struct fat_ent* findfile(const char* n, int dir=0){
+      return 0;
     };
     unsigned int rc;
+    unsigned char dl;
+    unsigned char* ff;
+    unsigned char* buf;
+    drive* d;
 };
 class fat : public fs{
   public:
-    fat();
-    ~fat();
-    void init(drive*) override;
-    int calcclus(int clus);
-    struct fat_ent* getintdir(int clus);
-    int readfat(int ind);
-    void writefat(int ind, int d);
-    void readclus(unsigned char* buf, int cnt, int clus);
-    void writeclus(unsigned char* buf, int cnt, int clus);
-    void readcluschain(unsigned char* buf, int clus);
-    void writecluschain(unsigned char* buf, int clus, int size);
-    struct fat_ent* search_intent(const char* name, int dir);
-    int getchainsize(int clus);
-    file* getf(const char* n, int dir) override;
-    dirent* getd(const char* n, int dir) override;
-    int getdn(const char* n, int dir) override;
-    unsigned char* ff;
+    void init(drive* d) override;
+    unsigned int getfat(unsigned int ind) override;
+    unsigned int calcblock(unsigned int clus) override;
+    void preparecluschain(unsigned int clus=0) override;
+    unsigned char* getclusaddr(unsigned int clus) override;
+    struct fat_ent* findfile(const char* n, int dir=0) override;
     struct BPB* bpb;
-    drive* dv;
     unsigned int* fats;
+};
+namespace fatd{
+  
+  void makename(struct fat_lent* l, char* n);
 };
 class terminal{
   public:
@@ -321,17 +327,19 @@ unsigned long long getpaddr(unsigned long long* p4, unsigned long long vaddr);
 unsigned long long searchmem(size_t size);
 void allocpage(unsigned long long* p4, addr_t vaddr, addr_t paddr, size_t size, char flags);
 void cli();
+void fputc(int c, file* f);
 void set_idt(int n, unsigned long long offset, short sel, unsigned char attr);
 void pic_init();
 void sti();
 unsigned long long getpaddr(unsigned long long* p4, unsigned long long vaddr);
-file* fopen(const char* name);
+//file* fopen(const char* name);
 void allocpage(unsigned long long* p4, addr_t vaddr, addr_t paddr, size_t size, char flags);
 unsigned long long* makep4();
 void closef(file* f);
 dirent* opendir(const char* name);
 void breakp4(unsigned long long* ap4);
 void closedir(dirent*);
+void createf(const char* name);
 void api_init();
 void open_irq(char irq);
 namespace layerd{

@@ -28,14 +28,7 @@ extern "C" unsigned long long apibody(struct tc* ct){
     }
     return mtaskd::current->brsp;
   }else if(ct->rax==5){
-    file* f=fopen((const char*)ct->rdi);
-    if(f){
-      allocpage(getcr3(), (unsigned long long)f, (unsigned long long)f, sizeof(file), 7);
-      allocpage(getcr3(), (unsigned long long)f->base, (unsigned long long)f->base, f->size, 7);
-      return (unsigned long long)f;
-    }
   }else if(ct->rax==6){
-    closef((file*)ct->rdi);
     
   }else if(ct->rax==7){
     unsigned long long addr=ct->rdi;

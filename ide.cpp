@@ -32,7 +32,7 @@ idedrv::idedrv(unsigned char a){
 }
 void idedrv::read(unsigned char* buf, unsigned int cnt, unsigned int lba512){
   for(int i=0;i<cnt;i++){
-    if(sendcmd(1, lba512, lba512>>8, lba512>>16, 0xe0|(addr<<4)|((lba512>>24)&0xf), 0x20)&1)return;
+    if(sendcmd(1, (lba512+i), (lba512+i)>>8, (lba512+i)>>16, 0xe0|(addr<<4)|((lba512>>24)&0xf), 0x20)&1)return;
     for(int j=0;j<256;j++){
       *(unsigned short*)&buf[512*i+j*2]=io_in16(0x1f0);
     }
@@ -40,7 +40,7 @@ void idedrv::read(unsigned char* buf, unsigned int cnt, unsigned int lba512){
 }
 void idedrv::write(unsigned char* buf, unsigned int cnt, unsigned int lba512){
   for(int i=0;i<cnt;i++){
-    if(sendcmd(1, lba512, lba512>>8, lba512>>16, 0xe0|(addr<<4)|((lba512>>24)&0xf), 0x30)&1)return;;
+    if(sendcmd(1, (lba512+i), (lba512+i)>>8, (lba512+i)>>16, 0xe0|(addr<<4)|((lba512>>24)&0xf), 0x30)&1)return;;
     for(int j=0;j<256;j++){
       io_out16(0x1f0, *(unsigned short*)&buf[i*512+j*2]);
     }

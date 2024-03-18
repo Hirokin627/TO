@@ -1,7 +1,11 @@
 #include "kernel.h"
 
+    extern unsigned char mpb;
+    extern unsigned char spb;
 void pic_init(){
   cns->puts("initialing pic...\n");
+  mpb=0xff;
+  spb=0xff;
   io_out8(0x21, 0xff);
   io_out8(0xa1, 0xff);
   
@@ -21,11 +25,9 @@ void pic_init(){
 
 void open_irq(char irq){
   if(irq<8){ 
-    extern unsigned char mpb;
     mpb&=~(1<<irq);
     io_out8(0x21, mpb);
   }else{
-    extern unsigned char spb;
     open_irq(2);
     spb&=~(1<<(irq-8));
     io_out8(0xa1, spb);

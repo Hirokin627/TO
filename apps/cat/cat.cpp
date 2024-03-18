@@ -7,7 +7,10 @@ int main(int argc, char** argv){
     sys->exit();
   }
   file* f=sys->openf((const char*)argv[argc-1]);
-  if(!f)sys->exit();
+  if(!f){
+    sys->puts("File not found\n");
+    sys->exit();
+  }
   f->cnt=0;
   for(int i=0;i<f->size;i++)sys->putc(f->base[i]);
   closef(f);

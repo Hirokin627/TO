@@ -65,7 +65,6 @@ extern "C" void nKernelmain(struct arg* ai){
   cns=new console(60, (scrysize)/16);
   pci::init();
   pic_init();
-  asm("sti");
   ided::init();
   satad::init();
   cns->puts("MSR=%x\n", readmsr(0xc0000080));
@@ -215,23 +214,17 @@ extern "C" void nKernelmain(struct arg* ai){
               asm("sti");
               fat* f=(fat*)drvd::drvs[bdl]->files;
               //f->init(drvd::drvs['A']);
-              file* fl=f->getf("test.txt", f->rc);
-              cns->puts("first b:%02x\n", fl->base[0]);
-              closef(fl);
             }
           }else if(k==5){
-            fat* f=(fat*)drvd::drvs[bdl]->files;
+            /*fat* f=(fat*)drvd::drvs[bdl]->files;
             dirent* d=f->getd(".", f->rc);
             dirent* de=d;
             while(de->reclen){
               cns->puts("name:%s\n", de->name);
               de++;
             }
-            closedir(d);
+            closedir(d);*/
           }else if(k==6&&drvd::drvs[bdl]){
-            file* f=fopen("efi/boot/bootx64.efi");
-            cns->puts("first b:%02x\n", f->base[0]);
-            closef(f);
           }else if(k==7){
             asm("cli");
             task* t=new task((unsigned long long)terminald::main);

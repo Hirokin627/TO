@@ -1,217 +1,106 @@
 #include "kernel.h"
-fat::fat(){
-}
 void fat::init(drive* drv){
-  dv=drv;
-  bpb=(struct BPB*)searchmem(512);
-  dv->read((unsigned char*)bpb, 1, 0);
-  rc=bpb->root_cluster;
-  fats=(unsigned int*)searchmem(bpb->fat_size_32*512);
+  asm("cli");
+  d=drv;
+  buf=(unsigned char*)searchmem(2*1024*1024);
+  bpb=(struct BPB*)buf;
+  d->read(buf, 1, 0);
+  fats=(unsigned int*)&buf[bpb->reserved_sector_count*0x200];
   ff=(unsigned char*)searchmem(bpb->fat_size_32);
+  d->read((unsigned char*)fats, 1, bpb->reserved_sector_count);
 }
-fat::~fat(){
-  freemem((unsigned long long)bpb);
-  freemem((unsigned long long)fats);
-  freemem((unsigned long long)ff);
-}
-int fat::calcclus(int c){
-  return (c-2)*bpb->sectors_per_cluster+bpb->reserved_sector_count+bpb->fat_size_32*bpb->num_fats;
-}
-void fat::readclus(unsigned char* buf, int cnt, int clus){
-  for(int i=0;i<cnt;i++){
-    for(int j=0;j<bpb->sectors_per_cluster;j++){
-      dv->read(&buf[i*512*bpb->sectors_per_cluster+j*512], 1, calcclus(clus+i)+j);
-    }
-  }
-}
-void fat::writeclus(unsigned char* buf, int cnt, int clus){
-  for(int i=0;i<cnt;i++){
-    for(int j=0;j<bpb->sectors_per_cluster;j++){
-      dv->write(&buf[i*512*bpb->sectors_per_cluster+j*512], 1, calcclus(clus+i)+j);
-    }
-  }
-}
-int fat::readfat(int ind){
-  if(ff[ind/0x80]==0){
-    dv->read((unsigned char*)&fats[ind&~0x7f], 1, bpb->reserved_sector_count+(ind/0x80));
+unsigned int fat::getfat(unsigned int ind){
+  if(ind==0)ind=bpb->root_cluster;
+  if(!ff[ind/0x80]){
+    d->read((unsigned char*)&fats[ind&~0x7f], 1, ind/0x80+bpb->reserved_sector_count);
     ff[ind/0x80]=1;
   }
   return fats[ind];
 }
-void fat::writefat(int ind, int d){
-  readfat(ind);
-  fats[ind]=d;
-  dv->write((unsigned char*)&fats[ind&~0x7f], 1, bpb->reserved_sector_count+(ind/0x80));
+unsigned int fat::calcblock(unsigned int clus){
+  if(clus==0)clus=bpb->root_cluster;
+  unsigned int block=bpb->reserved_sector_count+bpb->num_fats*bpb->fat_size_32+(clus-2)*bpb->sectors_per_cluster;
+  return block;
 }
-int fat::getchainsize(int clus){
-  int size=bpb->sectors_per_cluster*512;
+unsigned char* fat::getclusaddr(unsigned int clus){
+  if(clus==0)clus=bpb->root_cluster;
+  return &buf[calcblock(clus)*512];
+}
+void fat::preparecluschain(unsigned int clus){
+  if(clus==0)clus=bpb->root_cluster;
+  if(clus<2)return;
   while(1){
-    if(readfat(clus)>=0xffffff8){
-      return size;
+    int lba=calcblock(clus);
+    for(int i=0;i<bpb->sectors_per_cluster;i++){
+      d->read(&buf[(lba+i)*512], 1, lba+i);
     }
-    size+=bpb->sectors_per_cluster*512;
-    clus=readfat(clus);
+    if(getfat(clus)>=0xffffff8)return;
+    clus=getfat(clus);
   }
 }
-struct fat_ent* fat::search_intent(const char* name, int dir){
-  bool canuse11=strlen(name)<=12;
-  struct fat_ent* d=getintdir(dir);
-  for(int i=0;d[i].name[0]!=0;i++){
-    if(d[i].attr==0x0f){
-      char n[256];
-      struct fat_lent* ld=(struct fat_lent*)&d[i];
-      int j=0;
-      while(1){
-        int ord=ld[j].ord&0x1f;
-        ord--;
-        for(int k=0;k<5;k++)
-          n[ord*13+k]=ld[j].name[k*2];
-        for(int k=0;k<6;k++)
-          n[ord*13+5+k]=ld[j].name2[k*2];
-        for(int k=0;k<2;k++)
-          n[ord*13+11+k]=ld[j].name3[k*2];
-        if(!strcmp((const char*)n, name)){
-          struct fat_ent* e=new struct fat_ent;
-          *e=d[i+(ld->ord&0x1f)];
-          freemem((unsigned long long)d);
-          return e;
-        }
-        if(ord==0){
-          break;
-        }
-        j++;
-      }
-      i+=ld->ord&0x1f;
-    }else if(d[i].attr!=8&&canuse11){
-      char n[13];
-      for(int j=0;j<13;j++)n[j]=0;
-      int j=0;
-      for(j=0;d[i].name[j]!=' '&&j<8;j++){
-        n[j]=d[i].name[j];
-      }
-      if(d[i].name[8]!=' '){ //拡張子がある
-        n[j]='.';
-        j++;
-        for(int k=0;k<3&&d[i].name[k+8]!=' ';k++){
-          n[j+k]=d[i].name[k+8];
-        }
-      }
-      char n11[13];
-      strcpy(n11, name);
-      for(int j=0;n11[j]!=0;j++){
-        if(n11[j]>='a'){
-          n11[j]-=0x20;
-        }
-      }
-      if(!strcmp((const char*)n, (const char*)n11)){
-        struct fat_ent* e=new struct fat_ent;
-        *e=d[i];
-        freemem((unsigned long long)d);
-        return e;
+struct fat_ent* fat::findfile(const char* n, int dir){
+  if(dir==0)dir=bpb->root_cluster;
+  if(n[1]==':'){
+    char drv=n[0];
+    if(drv>=0x60)drv-=0x40;
+    return drvd::drvs[drv]->files->findfile((const char*)&n[3]);
+  }
+  char* nb=(char*)searchmem(strlen(n));
+  strcpy(nb, n);
+  int md=0;
+  if(nb[strlen(n)-1]=='/')nb[strlen(n)-1]=0;
+  for(int i=0;i<strlen(n);i++){
+    if(nb[i]=='/'){
+      md++;
+      nb[i]=0;
+    }
+  }
+  int sp=0;
+  for(int i=0;i<md;i++){
+    struct fat_ent* f=findfile((const char*)&nb[sp], dir); 
+    if(f==0){
+      freemem((unsigned long long)nb);
+      return 0;
+    }
+    dir=f->getclus();
+    sp+=strlen((const char*)&nb[sp])+1;
+  }
+  if(md){
+    strcpy(nb, &nb[sp]);
+  }
+  preparecluschain(dir);
+  //cns->puts("final name=%s\n", nb);
+  struct fat_ent* de=(struct fat_ent*)getclusaddr(dir);
+  for(int i=0;de[i].name[0]!=0;i++){
+    if(de[i].attr==0x0f){
+      struct fat_lent* l=(struct fat_lent*)&de[i];
+      char en[256];
+      fatd::makename(l, (char*)en);
+      if(!strcmp((const char*)nb, en)){
+        freemem((unsigned long long)nb);
+        return (struct fat_ent*)&l[l->ord&0x1f];
       }
     }
   }
-  freemem((unsigned long long)d);
+  freemem((unsigned long long)nb);
   return 0;
 }
-void fat::readcluschain(unsigned char* buf, int clus){
-  while(1){
-    readclus(buf, 1, clus);
-    if(readfat(clus)>=0xffffff8)return;
-    buf+=bpb->sectors_per_cluster*512;
-    clus=readfat(clus);
-  }
-}
-struct fat_ent* fat::getintdir(int clus){
-  struct fat_ent* d=(struct fat_ent*)searchmem(getchainsize(clus));
-  readcluschain((unsigned char*)d, clus);
-  return d;
-}
-file* fat::getf(const char* n, int dir){
-  struct fat_ent* fe=search_intent(n, dir);
-  if(fe==0)return 0;
-  file* f=new file;
-  int size=fe->filesize;
-  if(size==0)size=1024;
-  f->ptr=(char*)searchmem((size+0xfff)&~0xfff);
-  f->base=f->ptr;
-  f->size=fe->filesize;
-  f->cnt=f->size;
-  strcpy(f->name, n);
-  readcluschain((unsigned char*)f->ptr, (fe->clus_h<<16)|fe->clus_l);
-  delete fe;
-  return f;
-  
-}
-int getclus(struct fat_ent* fe){
-  return (fe->clus_l)|(fe->clus_h<<16);
-}
-int fat::getdn(const char* n, int dir){
-  struct fat_ent* fe=search_intent(n, dir);
-  if(fe==0)return -1;
-  if(fe->attr!=0x10){
-    cns->puts("Invalid attr:%02x\n", fe->attr);
-    return -1;
-  }
-  int dn=getclus(fe);
-  if(dn==0)dn=rc;
-  delete fe;
-  return dn;
-}
-dirent* fat::getd(const char* n, int dir){
-  struct fat_ent* fe;
-  if(strcmp(n, ".")){
-    fe=search_intent(n, dir);
-    if(fe==0)return 0;
-  }else{
-    fe=new struct fat_ent;
-    fe->clus_l=dir&0xffff;
-    fe->clus_h=(dir>>16)&0xffff;
-  }
-  struct fat_ent* dc=getintdir(getclus(fe));
-  int me=0;
-  for(int i=0;dc[i].name[0]!=0;i++){
-    if(dc[i].attr==0x0f){
-      me++;
-      i+=dc[i].name[0]&0x1f;
-    }else if(dc[i].attr!=0x08){
-      me++;
-    }
-  }
-  dirent* de=(dirent*)searchmem(sizeof(dirent)*(me+1));
-  int dp=0;
-  for(int i=0;dc[i].name[0]!=0;i++){
-    if(dc[i].attr==0x0f){
-      struct fat_lent* l=(struct fat_lent*)&dc[i];
-      char* n=(char*)de[dp].name;
+namespace fatd{
+  void makename(struct fat_lent* l, char* n){
+    for(int i=0;i<(l->ord&0x1f);i++){
+      int sp=l[i].ord&0x1f;
+      sp--;
       for(int j=0;j<5;j++)
-        n[j]=l->name[j*2];
+        n[sp*13+j]=l[i].name[j*2];
       for(int j=0;j<6;j++)
-        n[5+j]=l->name2[j*2];
+        n[sp*13+j+5]=l[i].name2[j*2];
       for(int j=0;j<2;j++)
-        n[11+j]=l->name3[j*2];
-      de[dp].namelen=strlen((const char*)de[dp].name);
-      de[dp].reclen=sizeof(dirent);
-      if(l[l->ord&0x1f].attr==0x10){
-        de[dp].type=4;
-      }
-      dp++;
-    }else{               
+        n[sp*13+11+j]=l[i].name3[j*2];
     }
   }
-  delete fe;
-  freemem((unsigned long long)dc);
-  return de;
-}
-struct filefs{
-  file* f;
-  fs* files;
-  char name[256];
 };
 namespace fsd{
-  struct filefs* ffs;
   void init(){
-    ffs=(struct filefs*)searchmem(sizeof(struct filefs)*256);
   }
   void recognizefs(unsigned char d){
     drive* drv=drvd::drvs[d];
@@ -220,83 +109,14 @@ namespace fsd{
     if(!strncmp((const char*)&fsb[0x52], "FAT32", 5)){
       drv->files=new fat;
       fat* ft=(fat*)drv->files;
+      drv->files->dl=d;
       drv->files->init(drv);
-      cns->puts("bpc=%x\n", ft->bpb->sectors_per_cluster*512);
+      //cns->puts("bpc=%x\n", ft->bpb->sectors_per_cluster*512);
     }else{
-      cns->puts("FS not recognized\n");
+      //cns->puts("FS not recognized\n");
     }
     freemem((unsigned long long)fsb);
-    cns->puts("rc=%d mtas=%p\n", drv->files->rc, mtaskd::current);
+    //cns->puts("rc=%d mtas=%p\n", drv->files->rc, mtaskd::current);
     mtaskd::current->cd=drv->files->rc;
   }
 };
-int setmustdir(unsigned char* dl, char** path, int* dn, const char* n,char ddl=bdl){
-  //cns->puts("bdl=%c\n", ddl);
-  int sd=mtaskd::current->cd;
-  fs* s=drvd::drvs[ddl]->files;
-  unsigned char d=ddl;
-  if(n[strlen(n)-1]=='/')*(unsigned char*)&n[strlen(n)-1]=0;
-  if(n[1]==':'){
-    d=n[0];  
-  sd=s->rc;
-  }
-  //cns->puts("sd=%d\n", sd);
-  char* cn=(char*)searchmem(strlen(n)+1);
-  strcpy(cn, n);
-  int ss=strlen(cn);
-  int md=0;
-  for(int i=0;i<ss;i++){
-    if(cn[i]=='/'){
-      cn[i]=0;
-      md++;
-    }
-  }
-  //cns->puts("md=%d\n", md);
-  int p=0;
-  for(int i=0;i<md;i++,p+=strlen((const char*)&cn[p])+1){
-    //cns->puts("name=%s dir=%d\n", &cn[p], sd);
-    int nd=s->getdn((const char*)&cn[p], sd);
-    //cns->puts("nd=%d\n", nd);
-    if(nd==-1){
-      //cns->puts("invalid\n");
-      return -1;
-    }
-    sd=nd;
-  }
-  //cns->puts("path=%s\n", &cn[p]);
-  char* pth=(char*)searchmem(strlen((const char*)&cn[p])+1);
-  strcpy(pth, (const char*)&cn[p]);
-  *dl=d;
-  *path=pth;
-  *dn=sd;
-  return 0;
-}
-file* fopen(const char* name){
-  char* n;
-  fs* files;
-  unsigned char dl;
-  int dn;
-  if(setmustdir(&dl, &n, &dn, name))return 0;;  
-  //cns->puts("recieve data\ndl=%c pth=%s dir=%d\n", dl, n, dn);
-  files=drvd::drvs[dl]->files;
-  file* f=files->getf((const char*)n, dn);
-  freemem((unsigned long long)n);
-  return f;
-}
-void closef(file* f){
-  delete f;
-}
-dirent* opendir(const char* name){
-  char* n;
-  fs* files;
-  unsigned char dl;
-  int dn;
-  if(setmustdir(&dl, &n, &dn, name))return 0;;
-  files=drvd::drvs[dl]->files;
-  dirent* de=files->getd(n, dn);
-  freemem((unsigned long long)n);
-  return de;
-}
-void closedir(dirent* d){
-  freemem((unsigned long long)d);
-}
