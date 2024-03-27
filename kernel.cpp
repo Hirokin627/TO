@@ -44,9 +44,51 @@ unsigned char dp[44];
 unsigned char bdl=0;
 EFI_DEVICE_PATH_PROTOCOL* bdpp=(EFI_DEVICE_PATH_PROTOCOL*)dp;
 task* ta;
+void setvgaregister(unsigned short port, unsigned char index, unsigned char d){
+  io_out8(port, index);
+  if(port==0x3c0)io_out8(port+1, d);
+  else io_out8(port+1, d);
+}
+unsigned char readvgaregister(unsigned short port, unsigned char index){  
+  io_out8(port, index);
+  return io_in8(port+1);
+}
 extern "C" void nKernelmain(struct arg* ai){
   cli();
   asm("cli");
+  /*io_in8(0x3ca);
+  setvgaregister(0x3d4, 0x11, readvgaregister(0x3d4, 0x11)&~0x7f);
+  setvgaregister(0x3c4, 0x04, 0x00);
+  setvgaregister(0x3c0, 0x10, 0x0c);
+  setvgaregister(0x3c0, 0x11, 0x00);
+  setvgaregister(0x3c0, 0x12, 0x0f);
+  setvgaregister(0x3c0, 0x13, 0x08);
+  setvgaregister(0x3c0, 0x14, 0x00);
+  io_out8(0x3c2, 0x67);
+  setvgaregister(0x3c4, 0x01, 0x00);
+  setvgaregister(0x3c4, 0x03, 0x00);
+  setvgaregister(0x3c4, 0x04, 0x07);
+  setvgaregister(0x3ce, 0x05, 0x10);
+  setvgaregister(0x3ce, 0x06, 0x0e);
+  setvgaregister(0x3d4, 0x00, 0x5f);
+  setvgaregister(0x3d4, 0x01, 0x4f);
+  setvgaregister(0x3d4, 0x02, 0x50);
+  setvgaregister(0x3d4, 0x03, 0x82);
+  setvgaregister(0x3d4, 0x04, 0x55);
+  setvgaregister(0x3d4, 0x05, 0x81);
+  setvgaregister(0x3d4, 0x06, 0xbf);
+  setvgaregister(0x3d4, 0x07, 0x1f);
+  setvgaregister(0x3d4, 0x08, 0x00);
+  setvgaregister(0x3d4, 0x09, 0x4f);
+  setvgaregister(0x3d4, 0x10, 0x9c);
+  setvgaregister(0x3d4, 0x11, 0x8e);
+  setvgaregister(0x3d4, 0x12, 0x8f);
+  setvgaregister(0x3d4, 0x13, 0x28);
+  setvgaregister(0x3d4, 0x14, 0x1f);
+  setvgaregister(0x3d4, 0x15, 0x96);
+  setvgaregister(0x3d4, 0x16, 0xb9);
+  setvgaregister(0x3d4, 0x17, 0xa3);
+  setvgaregister(0x3c4, 0x04, 0x04);*/
   vram=ai->Frame.fb;
   scrxsize=ai->Frame.xsize;
   scrysize=ai->Frame.ysize;
@@ -65,6 +107,8 @@ extern "C" void nKernelmain(struct arg* ai){
   cns=new console(60, (scrysize)/16);
   pci::init();
   pic_init();
+  asm("cli");
+  drvd::init(bdpp);
   ided::init();
   satad::init();
   cns->puts("MSR=%x\n", readmsr(0xc0000080));
@@ -119,10 +163,10 @@ extern "C" void nKernelmain(struct arg* ai){
   //graphic::drawbox(l, 0xffffff, 0, 0, 15, 15);
   l->updown(layerd::top+1);
   fsd::init();
-  drvd::init(bdpp);
   //window* test=new window(200, 200);
   window* mw;
   int mpx,mpy;
+  asm("cli");
   xhci::init();
   unsigned char bk[256];
   while(1){

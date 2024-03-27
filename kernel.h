@@ -73,6 +73,15 @@ char attr;
 char name[256];
 } file;
 #include "dirent.h"
+struct fsinfo{
+  unsigned int leadsig;
+  unsigned char rsv1[480];
+  unsigned int strucsig;
+  unsigned int freecnt;
+  unsigned int nxtfree;
+  unsigned char rsv2[12];
+  unsigned int trailsig;
+}__attribute__((packed));
 struct BPB {
   uint8_t jump_boot[3];
   char oem_name[8];
@@ -102,6 +111,16 @@ struct BPB {
   char volume_label[11];
   char fs_type[8];
 } __attribute__((packed));
+struct part_ent{
+  unsigned char bf;
+  unsigned char sh;
+  unsigned short cysc;
+  unsigned char type;
+  unsigned char endh;
+  unsigned short ecysc;
+  unsigned int lbaoff;
+  unsigned int lbasize;
+}__attribute__((packed));
 struct fat_ent{
 	unsigned char name[11];
 	char attr;
@@ -116,7 +135,7 @@ struct fat_ent{
 	short clus_l;
 	int filesize;
 	
-	unsigned char getclus(){
+	unsigned int getclus(){
 	  return (clus_h<<16)|clus_l;
 	}
 }__attribute__((packed));
@@ -247,34 +266,43 @@ class timer{
 class fs;
 class drive{
   public:
-    virtual void read(unsigned char* buf, unsigned int cnt, unsigned int lba512){
+    virtual void read(unsigned char* buf, unsigned int cnt, unsigned int lba512, unsigned int pn=0){
     };
-    virtual void write(unsigned char* buf, unsigned int cnt, unsigned int lba512){
+    virtual void write(unsigned char* buf, unsigned int cnt, unsigned int lba512, unsigned int pn=0){
     };
+    virtual int getsectorsize(){
+      return 0;
+    };
+    void createfs();
     unsigned int bpb;
     unsigned int type;
+    unsigned int pbase;
     fs* files;
 };
 class mass;
 class usbdrv : public drive{
   public:
     usbdrv(unsigned char slot, unsigned char interface);
-    void read(unsigned char* buf, unsigned int cnt, unsigned int lba512) override;
-    void write(unsigned char* buf, unsigned int cnt, unsigned int lba512) override;
+    void read(unsigned char* buf, unsigned int cnt, unsigned int lba512, unsigned int pn=0) override;
+    void write(unsigned char* buf, unsigned int cnt, unsigned int lba512, unsigned int pn=0) override;
     mass* intf;
 };
 class idedrv: public drive{
   public:
     idedrv(unsigned char addr);
-    void read(unsigned char* buf, unsigned int cnt, unsigned int lba512) override;
-    void write(unsigned char* buf, unsigned int cnt, unsigned int lba512) override;
+    unsigned char identd[512];
+    void read(unsigned char* buf, unsigned int cnt, unsigned int lba512, unsigned int pn=0) override;
+    void write(unsigned char* buf, unsigned int cnt, unsigned int lba512, unsigned int pn=0) override;
+    int getsectorsize() override;
     unsigned char addr;
 };
 class fs{
   public:
+    fs();
     virtual void init(drive* drv){
       
     };
+    ~fs();
     virtual void preparecluschain(unsigned int clus){
     };
     virtual unsigned int calcblock(unsigned int clus){
@@ -289,7 +317,16 @@ class fs{
     virtual unsigned int getfat(unsigned int ind){
       return 0;
     };
+    virtual void writefat(int ind, unsigned int d){
+    };
     virtual struct fat_ent* findfile(const char* n, int dir=0){
+      return 0;
+    };
+    virtual void writef(struct fat_ent*, unsigned char* buf, int size, int dir=0){
+    };
+    virtual void writecluschain(unsigned char* buf, int clus, int size){
+    };
+    virtual struct fat_ent* createe(const char* n, int dir=0){
       return 0;
     };
     unsigned int rc;
@@ -301,11 +338,21 @@ class fs{
 class fat : public fs{
   public:
     void init(drive* d) override;
+    fat();
+    ~fat();
+    unsigned int allocfat();
+    void generatee(struct fat_ent* e, const char* n, int dir);
+    struct fat_ent* getnext(struct fat_ent* e, int dir);
+    unsigned int getchainsize(int c);
+    void writef(struct fat_ent* f, unsigned char* buf, int size, int dir=0) override;
     unsigned int getfat(unsigned int ind) override;
     unsigned int calcblock(unsigned int clus) override;
     void preparecluschain(unsigned int clus=0) override;
     unsigned char* getclusaddr(unsigned int clus) override;
+    void writefat(int ind, unsigned int d) override;
     struct fat_ent* findfile(const char* n, int dir=0) override;
+    void writecluschain(unsigned char* buf, int clus, int size) override;
+    struct fat_ent* createe(const char* n, int dir=0) override;
     struct BPB* bpb;
     unsigned int* fats;
 };
@@ -391,6 +438,7 @@ namespace drvd{
 namespace fsd{
   void recognizefs(unsigned char d);
   void init();
+  void copyfatdir(fat* froms, struct fat_ent* fent, int fdir, fat* tos, struct fat_ent* toent, int todir);
 };
 namespace terminald{
   void main(task* tsk);

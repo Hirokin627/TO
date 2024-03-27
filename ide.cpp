@@ -18,10 +18,23 @@ namespace ided{
     if(stt&1){
       cns->puts("HD not found\n");
     }else{
-      for(int i=0;i<256;i++)io_in16(0x1f0);
       cns->puts("HD found\n");
-      drive* ide=new idedrv(0);
-      drvd::registdrv(1, 0, 0, ide);
+      idedrv* ide=new idedrv(0);
+      ide->bpb=0x200;
+      for(int i=0;i<256/2;i++)*(unsigned short*)&ide->identd[i*2]=io_in16(0x1f0);
+      cns->puts("LBA=%x\n", *(unsigned int*)&ide->identd[0x78]);
+      drvd::registdrv(1, 0, 0, (drive*)ide);
+    }
+    stt=sendcmd(0, 0, 0, 0, 0xb0, 0xec);
+    if(stt&1){
+      cns->puts("HD not found\n");
+    }else{
+      cns->puts("HD found\n");
+      idedrv* ide=new idedrv(1);
+      ide->bpb=0x200;
+      for(int i=0;i<256/2;i++)*(unsigned short*)&ide->identd[i*2]=io_in16(0x1f0);
+      cns->puts("LBA=%x\n", *(unsigned int*)&ide->identd[0x78]);
+      drvd::registdrv(1, 0, 1, (drive*)ide);
     }
   }
 };
@@ -29,8 +42,10 @@ using namespace ided;
 idedrv::idedrv(unsigned char a){
   addr=a;
   type=1;
+  
 }
-void idedrv::read(unsigned char* buf, unsigned int cnt, unsigned int lba512){
+void idedrv::read(unsigned char* buf, unsigned int cnt, unsigned int lba512, unsigned int pn){
+  if(pn!=-1)lba512+=pbase;
   for(int i=0;i<cnt;i++){
     if(sendcmd(1, (lba512+i), (lba512+i)>>8, (lba512+i)>>16, 0xe0|(addr<<4)|((lba512>>24)&0xf), 0x20)&1)return;
     for(int j=0;j<256;j++){
@@ -38,11 +53,15 @@ void idedrv::read(unsigned char* buf, unsigned int cnt, unsigned int lba512){
     }
   }
 }
-void idedrv::write(unsigned char* buf, unsigned int cnt, unsigned int lba512){
+void idedrv::write(unsigned char* buf, unsigned int cnt, unsigned int lba512, unsigned int pn){
+  if(pn!=-1)lba512+=pbase;
   for(int i=0;i<cnt;i++){
     if(sendcmd(1, (lba512+i), (lba512+i)>>8, (lba512+i)>>16, 0xe0|(addr<<4)|((lba512>>24)&0xf), 0x30)&1)return;;
     for(int j=0;j<256;j++){
       io_out16(0x1f0, *(unsigned short*)&buf[i*512+j*2]);
     }
   }
+}
+int idedrv::getsectorsize(){
+  return *(int*)&identd[0x78];
 }

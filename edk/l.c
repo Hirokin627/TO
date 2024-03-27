@@ -93,6 +93,11 @@ EFI_STATUS EFIAPI UefiMain(EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST){
 	      for(int j=0;j<*(unsigned short*)test->Length;j++){
 	        *(unsigned char*)((unsigned long long)&ai.bd+j)=*(unsigned char*)((unsigned long long)test+j);
 	      }
+	    }else if(test->SubType==1){
+	      Print(L"ATA Device: PS=%d MS=%d\n", *(unsigned char*)((unsigned long long)test+4), *(unsigned char*)((unsigned long long)test+5));
+	      for(int j=0;j<*(unsigned short*)test->Length;j++){
+	        *(unsigned char*)((unsigned long long)&ai.bd+j)=*(unsigned char*)((unsigned long long)test+j);
+	      }
 	    }
 	  }
 	  Print(L"Length=%d\n", *(unsigned short*)test->Length);

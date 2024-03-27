@@ -414,7 +414,7 @@ namespace xhci{
       }
       asm("sti");
       drivers[slot][di]->comp(trb);
-      
+      asm("cli");
       //asm("sti");
       for(int i=1;i<=maxports;i++){
         if(ports[i].phase==waitfree)resetport(i);

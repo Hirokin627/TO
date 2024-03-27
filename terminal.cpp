@@ -72,8 +72,16 @@ void terminal::m(task* t){
             }
             if(cmdl[lp-1]==0)lp--;
             if(!strcmp((const char*)cmdl, "ls")){
-              drvd::drvs[bdl]->files->preparecluschain(0);
-              struct fat_ent* de=(struct fat_ent*)drvd::drvs[bdl]->files->getclusaddr(0);
+              if(f_arg[strlen(f_arg)-1]=='.')f_arg[strlen(f_arg)-1]=0;
+              struct fat_ent* efd=0;
+              if(!strcmp((const char*)f_arg, "")||f_arg==cmdl){
+                efd=new struct fat_ent;
+                efd->clus_l=efd->clus_h=0;
+              }else{
+                efd=drvd::drvs[bdl]->files->findfile((const char*)f_arg);
+              }
+              drvd::drvs[bdl]->files->preparecluschain(efd->getclus());
+              struct fat_ent* de=(struct fat_ent*)drvd::drvs[bdl]->files->getclusaddr(efd->getclus());
               for(int i=0;de[i].name[0]!=0;i++){
                 if(de[i].attr==0x0f){
                   struct fat_lent* l=(struct fat_lent*)&de[i];
@@ -83,7 +91,7 @@ void terminal::m(task* t){
                   freemem((unsigned long long)n);
                   i+=de[i].name[0]&0x1f;
                   //i--;
-                }else{
+                }else if(de[i].name[0]!=0xe5){
                   for(int j=0;j<11;j++){
                     cns->puts("%c", de[i].name[j]);
                   }
@@ -106,7 +114,9 @@ void terminal::m(task* t){
             }else if(!strcmp((const char*)cmdl, "lsd")){
               for(unsigned int i=0;i<0xff;i++){
                 if(drvd::drvs[i]){
-                  cns->puts("Drive %c: type:%d\n", i, drvd::drvs[i]->type);
+                  cns->puts("Drive %c: type:%d", i, drvd::drvs[i]->type);
+                  if(i==bdl)cns->puts("booted from this");
+                  cns->nline();
                 }
               }
             }/*else if(!strcmp((const char*)cmdl, "cat")){
@@ -147,36 +157,16 @@ void terminal::m(task* t){
               }
               cns->nline();
               char d=keytable0[getc()]-0x20;
-              cns->puts("Selected: %c\n", d);
-              //if(drvd::drvs[d]->files)delete drvd::drvs[d]->files;
+              cns->puts("Selected: %c bps=%x\n", d, drvd::drvs[d]->bpb);
               drive* nd=drvd::drvs[d];
-              drive* bd=drvd::drvs[bdl];
-              unsigned char* b=(unsigned char*)searchmem(512);
-              for(int i=0;i<0x20;i++){
-                bd->read(b, 1, i);
-                nd->write(b, 1, i);
-              }
-              freemem((unsigned long long)b);
-              struct BPB* bpb=(struct BPB*)searchmem(512);
-              bd->read((unsigned char*)bpb, 1, 0);
-              unsigned int* ft=(unsigned int*)searchmem(bpb->fat_size_32*512);
-              ft[0]=0xffffff8;
-              ft[1]=0xfffffff;
-              ft[2]=0xffffff8;
-              nd->write((unsigned char*)ft, bpb->fat_size_32, bpb->reserved_sector_count);
-              freemem((unsigned long long)ft);
-              unsigned char* buf=(unsigned char*)searchmem(1024);
-              fat* files=(fat*)nd->files;
-              //nd->write(buf, bpb->sectors_per_cluster, files->calcclus(bpb->root_cluster)); 
-              fsd::recognizefs(d);
-              freemem((unsigned long long)bpb);
+              nd->createfs();
               //while(1)drvd::drvs[bdl]->read((unsigned char*)searchmem(512), 1, 0);
               //createf((const char*)fn);
             }else if(cmdl[0]!=0){
               struct fat_ent* fe=drvd::drvs[bdl]->files->findfile((const char*)cmdl);;
               if(fe){
-                drvd::drvs[bdl]->files->preparecluschain(fe->getclus());
-                unsigned char* buf=drvd::drvs[bdl]->files->getclusaddr(fe->getclus());
+                drvd::drvs[cmdl[1]==':' ? cmdl[0]-0x20 : bdl]->files->preparecluschain(fe->getclus());
+                unsigned char* buf=drvd::drvs[cmdl[1]==':' ? cmdl[0]-0x20 : bdl]->files->getclusaddr(fe->getclus());
                 
                 if(buf[0]==0x7f){
                   file* f=new file;
