@@ -232,8 +232,8 @@ void mass::read(unsigned char* buf, unsigned int cnt, unsigned int lba){
   asm("sti");
   db[slot]=bulkout;
   while(initphase!=8){
-    posthandle();
     asm("cli");
+    posthandle();
   }
   for(int i=0;i<1;i++)asm("sti\nhlt");
   asm("cli");
@@ -262,8 +262,8 @@ void mass::write(unsigned char* buf, unsigned int cnt, unsigned int lba){
   asm("sti");
   db[slot]=bulkout;
   while(initphase!=8){
-    posthandle();
     asm("cli");
+    posthandle();
   }
   for(int i=0;i<1;i++)asm("sti\nhlt");
   //srflags(r);
@@ -271,35 +271,40 @@ void mass::write(unsigned char* buf, unsigned int cnt, unsigned int lba){
 }
 usbdrv::usbdrv(unsigned char slot, unsigned char interface){
   intf=(mass*)drivers[slot][interface];
+  pbase=0;
   type=5;
 }
 void usbdrv::read(unsigned char* buf, unsigned int cnt, unsigned int lba, unsigned int pn){
-  unsigned char tb[2048];
+  //unsigned char tb[2048];
+  asm("cli");
+  unsigned char* tb=(unsigned char*)searchmem(2048);
   if(pn!=-1)lba+=pbase;
   if(intf->bpb==0){
     cns->puts("BPB ZERO ERR\n");
     asm("cli\nhlt");
   }
   for(int i=0;i<cnt;i++){
-    unsigned int tlba=(lba+i)*0x200/intf->bpb;
-    //cns->puts("tlba=%x\n", tlba);
-    unsigned int blba=(lba+i)*0x200%intf->bpb;
-    intf->read(tb, 1, tlba);
-    for(int j=0;j<512;j++){
-      buf[i*512+j]=tb[blba+j];
-    }
+      unsigned long tlba=(lba+i)*0x200/intf->bpb;
+      //cns->puts("tlba=%x\n", tlba);
+      unsigned long blba=(lba+i)*0x200%intf->bpb;
+      intf->read(tb, 1, tlba);
+      for(int j=0;j<512;j++){
+        buf[i*512+j]=tb[blba+j];
+      }
   }
+  freemem((unsigned long long)tb);
 }
 void usbdrv::write(unsigned char* buf, unsigned int cnt, unsigned int lba, unsigned int pn){
-  unsigned char tb[2048];
+  unsigned char* tb=(unsigned char*)searchmem(2048);
   if(pn!=-1)lba+=pbase;
   for(int i=0;i<cnt;i++){
-    unsigned int tlba=(lba+i)*0x200/intf->bpb;
+    unsigned long tlba=(lba+i)*0x200/intf->bpb;
     intf->read(tb, 1, tlba);
-    unsigned int blba=(lba+i)*0x200%intf->bpb;
+    unsigned long blba=(lba+i)*0x200%intf->bpb;
     for(int j=0;j<512;j++){
       tb[blba+j]=buf[i*512+j];
     }
     intf->write(tb, 1, tlba);
   }
+  freemem((unsigned long long)tb);
 }

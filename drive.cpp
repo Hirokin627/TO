@@ -34,7 +34,7 @@ namespace drvd{
         break;
       }
     }
-    cns->puts("Drive type=%d main=%d sub=%d(%d %d %d)\n", bdtype, mainaddr, subaddr, type, mainaddr, subaddr);
+    cns->puts("Drive type=%d main=%d sub=%d(%d %d %d)\n", type, mainaddr, subaddr, bdtype, bdmainaddr, bdsubaddr);
     if(type==bdtype){
       if(mainaddr==bdmainaddr){
         if(subaddr==bdsubaddr){

@@ -8,11 +8,11 @@ namespace layerd{
     sb=(int*)searchmem(4*scrxsize*scrysize);
     layer* bl=new layer(scrxsize,scrysize);
     bl->col_inv=-1;
-    for(int i=0;i<scrxsize*scrysize;i++){
+    /*for(int i=0;i<scrxsize*scrysize;i++){
       bl->buf[i]=((255*i/scrxsize/scrysize)*0x10001)<<0;
       bl->buf[i]|=((255-(255*i/scrxsize/scrysize))*0x101)<<0;
-    }
-    //graphic::drawbox(bl, 0xcc2528, 0, 0, scrxsize-1, scrysize-1);
+    }*/
+    graphic::drawbox(bl, 0x008484, 0, 0, scrxsize-1, scrysize-1);
     graphic::drawbox(bl, 0xc6c6c6, 0, scrysize-28, scrxsize-1, scrysize-28);
     graphic::drawbox(bl, 0xffffff, 0, scrysize-27, scrxsize-1, scrysize-27);
     graphic::drawbox(bl, 0xc6c6c6, 0, scrysize-26, scrxsize-1, scrysize-1);

@@ -23,7 +23,7 @@ namespace ided{
       ide->bpb=0x200;
       for(int i=0;i<256/2;i++)*(unsigned short*)&ide->identd[i*2]=io_in16(0x1f0);
       cns->puts("LBA=%x\n", *(unsigned int*)&ide->identd[0x78]);
-      drvd::registdrv(1, 0, 0, (drive*)ide);
+      if(*(unsigned int*)&ide->identd[0x78]<0xfffffff)drvd::registdrv(1, 0, 0, (drive*)ide);
     }
     stt=sendcmd(0, 0, 0, 0, 0xb0, 0xec);
     if(stt&1){
@@ -34,7 +34,7 @@ namespace ided{
       ide->bpb=0x200;
       for(int i=0;i<256/2;i++)*(unsigned short*)&ide->identd[i*2]=io_in16(0x1f0);
       cns->puts("LBA=%x\n", *(unsigned int*)&ide->identd[0x78]);
-      drvd::registdrv(1, 0, 1, (drive*)ide);
+      if(*(unsigned int*)&ide->identd[0x78]<0xfffffff )drvd::registdrv(1, 0, 1, (drive*)ide);
     }
   }
 };

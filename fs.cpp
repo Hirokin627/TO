@@ -96,8 +96,28 @@ struct fat_ent* fat::findfile(const char* n, int dir){
         //cns->puts("pnt=%x\n", i);
         return (struct fat_ent*)&l[l->ord&0x1f];
       }
+      i+=l->ord&0x1f;
     }else if(!(de[i].attr&8)){
-      
+      char name82[13];
+      name82[11]=0;
+      strncpy((char*)name82, (const char*)de[i].name, 11);
+      for(int j=0;j<11;j++){
+        if(name82[j]==' ')name82[j]=0;
+      }
+      if(name82[8]!=0){
+        char ext[4];
+        strncpy(ext, (const char*)&name82[8], 3);
+        strncpy(&name82[9], ext, 3);
+        name82[8]='.';
+        strcpy(&name82[strlen((const char*)name82)], &name82[8]);
+      }
+      for(int j=0;j<11;j++){
+        if(name82[j]<'a'&&name82[j]!='.'&&name82[j]!=0){
+          name82[j]+=0x20;
+        }
+      }
+        
+      cns->puts("83 name=%s\n", name82);
     }
     if(i+1>=epc){
       if(getfat(dir)>=0xffffff8){
@@ -338,7 +358,8 @@ namespace fsd{
     drive* drv=drvd::drvs[d];
     unsigned char* fsb=(unsigned char*)searchmem(512);
     drv->read(fsb, 1, 0);
-    if(fsb[446]==0x80){
+    cns->puts("first b:%02x 446=%x\n", fsb[0], fsb[446]);
+    if(fsb[446]==0x80||fsb[450]==0x0c){
       drv->pbase=*(unsigned int*)&fsb[446+8];
       drv->read(fsb, 1, 0);
       cns->puts("part found base=%x 80b:%x\n", drv->pbase, fsb[0]);
@@ -387,7 +408,7 @@ namespace fsd{
   void copyfatdir(fat* froms, struct fat_ent* fent, int fdir, fat* tos, struct fat_ent* toent, int todir){
     asm("cli");
     createdir(tos, toent, todir);
-    cns->puts("fdir=%d\n", fdir);
+    //cns->puts("fdir=%d\n", fdir);
     /*int tdc=toent->getclus();
     cns->puts("tdc=%d\n", tdc);
     int fepc=froms->bpb->sectors_per_cluster*froms->bpb->bytes_per_sector/sizeof(struct fat_ent);
@@ -426,13 +447,13 @@ namespace fsd{
         struct fat_ent* tfe=tos->createe((const char*)n, tdc);
         if(tfe->attr==0x0f)tfe+=tfe->name[0]&0x1f;
         i+=l->ord&0x1f;
-        cns->puts("attr=%x\n", fd[i].attr);
+        //cns->puts("attr=%x\n", fd[i].attr);
         if(fd[i].attr==0x10){
           /*createdir(tos, tfe, tdc);
           froms->preparecluschain(fd[i].getclus());*/
           copyfatdir(froms, &fd[i], fdc, tos, tfe, tdc);
         }else{
-          cns->puts("%s filesize=%d\n", n, fd[i].filesize);
+          //cns->puts("%s filesize=%d\n", n, fd[i].filesize);
           froms->preparecluschain(fd[i].getclus());
           tos->writef(tfe, froms->getclusaddr(fd[i].getclus()), fd[i].filesize, tdc);
         }

@@ -72,16 +72,24 @@ void terminal::m(task* t){
             }
             if(cmdl[lp-1]==0)lp--;
             if(!strcmp((const char*)cmdl, "ls")){
+              char dl=bdl;
+              retry:
               if(f_arg[strlen(f_arg)-1]=='.')f_arg[strlen(f_arg)-1]=0;
               struct fat_ent* efd=0;
               if(!strcmp((const char*)f_arg, "")||f_arg==cmdl){
                 efd=new struct fat_ent;
                 efd->clus_l=efd->clus_h=0;
               }else{
-                efd=drvd::drvs[bdl]->files->findfile((const char*)f_arg);
+                if(f_arg[1]==':'){
+                  dl=f_arg[0] > 0x60 ? f_arg[0]-0x20 : f_arg[0];
+                  cns->puts("dl=%c\n", dl);
+                  f_arg[0]=0;
+                  goto retry;
+                }
+                  efd=drvd::drvs[dl]->files->findfile((const char*)f_arg);\
               }
-              drvd::drvs[bdl]->files->preparecluschain(efd->getclus());
-              struct fat_ent* de=(struct fat_ent*)drvd::drvs[bdl]->files->getclusaddr(efd->getclus());
+              drvd::drvs[dl]->files->preparecluschain(efd->getclus());
+              struct fat_ent* de=(struct fat_ent*)drvd::drvs[dl]->files->getclusaddr(efd->getclus());
               for(int i=0;de[i].name[0]!=0;i++){
                 if(de[i].attr==0x0f){
                   struct fat_lent* l=(struct fat_lent*)&de[i];
@@ -163,8 +171,9 @@ void terminal::m(task* t){
               //while(1)drvd::drvs[bdl]->read((unsigned char*)searchmem(512), 1, 0);
               //createf((const char*)fn);
             }else if(cmdl[0]!=0){
-              struct fat_ent* fe=drvd::drvs[bdl]->files->findfile((const char*)cmdl);;
+              struct fat_ent* fe=drvd::drvs[cmdl[1]==':' ? cmdl[0]-0x20 : bdl]->files->findfile((const char*)cmdl);;
               if(fe){
+                cns->puts("file found. reading\n");
                 drvd::drvs[cmdl[1]==':' ? cmdl[0]-0x20 : bdl]->files->preparecluschain(fe->getclus());
                 unsigned char* buf=drvd::drvs[cmdl[1]==':' ? cmdl[0]-0x20 : bdl]->files->getclusaddr(fe->getclus());
                 
