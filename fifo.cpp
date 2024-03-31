@@ -7,7 +7,7 @@ fifo::fifo(int sz, task* t){
   tsk=t;
 }
 void fifo::write(unsigned long long d){
-  asm("cli");
+  //asm("cli");
   if(!lock){
     lock=1;
     datas[wp]=d;

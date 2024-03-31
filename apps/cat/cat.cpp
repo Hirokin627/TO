@@ -12,6 +12,7 @@ int main(int argc, char** argv){
     sys->exit();
   }
   f->cnt=0;
+  //sys->puts("size=%d\n", f->size);
   for(int i=0;i<f->size;i++)sys->putc(f->base[i]);
   closef(f);
   sys->exit();

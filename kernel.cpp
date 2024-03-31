@@ -169,10 +169,16 @@ extern "C" void nKernelmain(struct arg* ai){
   asm("cli");
   xhci::init();
   unsigned char bk[256];
+  unsigned char fo=0;
   while(1){
     asm("cli");
     if(kernelbuf->len==0){
-      asm("sti\nhlt");
+      if(fo==0)
+        asm("sti\nhlt");
+      else{
+        fo=0;
+        mtaskd::taskswitch();
+      }
       //switchcont(&taskb, &taska);
       //asm("sti");
     }else{
@@ -227,7 +233,7 @@ extern "C" void nKernelmain(struct arg* ai){
         l->slide(mx, my);
       }else if(q==1){
         xhci::posthandle();
-        asm("sti");
+        //asm("sti");
       }else if(q==2){
         unsigned char k=kernelbuf->read();
         if(nowb){
@@ -311,10 +317,12 @@ extern "C" void nKernelmain(struct arg* ai){
         drvd::registdrv(type, mainaddr, subaddr, drv);
         asm("sti");
       }else if(q==7){
+        fo=1;
         int x0=kernelbuf->read();
         int y0=kernelbuf->read();
         int x1=kernelbuf->read();
         int y1=kernelbuf->read();
+        asm("sti");
         layerd::trefreshsub(x0, y0, x1, y1);
       }else if(q==8){
         terminal* tm=(terminal*)kernelbuf->read();

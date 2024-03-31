@@ -173,7 +173,7 @@ void terminal::m(task* t){
             }else if(cmdl[0]!=0){
               struct fat_ent* fe=drvd::drvs[cmdl[1]==':' ? cmdl[0]-0x20 : bdl]->files->findfile((const char*)cmdl);;
               if(fe){
-                cns->puts("file found. reading\n");
+                //cns->puts("file found. reading\n");
                 drvd::drvs[cmdl[1]==':' ? cmdl[0]-0x20 : bdl]->files->preparecluschain(fe->getclus());
                 unsigned char* buf=drvd::drvs[cmdl[1]==':' ? cmdl[0]-0x20 : bdl]->files->getclusaddr(fe->getclus());
                 

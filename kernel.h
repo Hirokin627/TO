@@ -61,7 +61,6 @@ struct IDT{
 typedef struct {
 char drv;
 char* ptr;
-char written;
 int cnt;
 int size;
 char* base;
@@ -71,6 +70,7 @@ char file;
 int dir;
 char attr;
 char name[256];
+char written;
 } file;
 #include "dirent.h"
 struct fsinfo{

@@ -28,6 +28,17 @@ extern "C" unsigned long long apibody(struct tc* ct){
     }
     return mtaskd::current->brsp;
   }else if(ct->rax==5){
+    struct fat_ent* f=(struct fat_ent*)drvd::drvs[bdl]->files->findfile((const char*)getpaddr(getcr3(), ct->rdi));
+    if(f==0)return 0;
+    file *fd=new file;
+    fd->ptr=fd->base;
+    fd->size=f->filesize;
+    drvd::drvs[bdl]->files->preparecluschain(f->getclus());
+    cns->puts("size=%d\n", fd->size);
+    fd->base=(char*)drvd::drvs[bdl]->files->getclusaddr(f->getclus());;
+    allocpage(getcr3(), (unsigned long long)fd->base, (unsigned long long)fd->base, f->filesize+0xfff, 7);
+    allocpage(getcr3(), (unsigned long long)fd, (unsigned long long)fd, sizeof(file), 7);
+    return (unsigned long long)fd;
   }else if(ct->rax==6){
     
   }else if(ct->rax==7){

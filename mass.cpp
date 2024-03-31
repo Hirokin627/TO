@@ -234,8 +234,10 @@ void mass::read(unsigned char* buf, unsigned int cnt, unsigned int lba){
   while(initphase!=8){
     asm("cli");
     posthandle();
+    //asm("sti\nhlt");
   }
-  for(int i=0;i<1;i++)asm("sti\nhlt");
+    asm("sti\nhlt");
+  //for(int i=0;i<1;i++)asm("sti\nhlt");
   asm("cli");
   //srflags(r);
 }
@@ -264,8 +266,10 @@ void mass::write(unsigned char* buf, unsigned int cnt, unsigned int lba){
   while(initphase!=8){
     asm("cli");
     posthandle();
+    //asm("sti\nhlt");
   }
-  for(int i=0;i<1;i++)asm("sti\nhlt");
+    asm("sti\nhlt");
+  //for(int i=0;i<1;i++)asm("sti\nhlt");
   //srflags(r);
   asm("cli");
 }
@@ -278,6 +282,7 @@ void usbdrv::read(unsigned char* buf, unsigned int cnt, unsigned int lba, unsign
   //unsigned char tb[2048];
   asm("cli");
   unsigned char* tb=(unsigned char*)searchmem(2048);
+  asm("sti");
   if(pn!=-1)lba+=pbase;
   if(intf->bpb==0){
     cns->puts("BPB ZERO ERR\n");
@@ -292,10 +297,13 @@ void usbdrv::read(unsigned char* buf, unsigned int cnt, unsigned int lba, unsign
         buf[i*512+j]=tb[blba+j];
       }
   }
+  asm("cli");
   freemem((unsigned long long)tb);
 }
 void usbdrv::write(unsigned char* buf, unsigned int cnt, unsigned int lba, unsigned int pn){
+  asm("cli");
   unsigned char* tb=(unsigned char*)searchmem(2048);
+  asm("sti");
   if(pn!=-1)lba+=pbase;
   for(int i=0;i<cnt;i++){
     unsigned long tlba=(lba+i)*0x200/intf->bpb;
@@ -306,5 +314,6 @@ void usbdrv::write(unsigned char* buf, unsigned int cnt, unsigned int lba, unsig
     }
     intf->write(tb, 1, tlba);
   }
+  asm("cli");
   freemem((unsigned long long)tb);
 }

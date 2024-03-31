@@ -101,7 +101,12 @@ void drive::createfs(){
   unsigned int* fat=(unsigned int*)searchmem(0x364*bpb);
   fat[0]=0xffffff8;
   fat[1]=0xfffffff;
-  write((unsigned char*)fat, 0x364, 0x20);
+  for(int i=0;i<0x364;i++){
+    write((unsigned char*)fat+i, 1, 0x20+i);
+    if(i%9==0){
+      cns->puts("%d%%\n", i/9);
+    }
+  }
   delete files;
   files=new class fat;
   fs* fls=drvd::drvs[bdl]->files;

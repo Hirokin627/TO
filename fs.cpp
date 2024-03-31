@@ -41,7 +41,7 @@ void fat::preparecluschain(unsigned int clus){
   while(1){
     int lba=calcblock(clus);
     for(int i=0;i<bpb->sectors_per_cluster;i++){
-      d->read(&buf[(lba+i)*bpb->bytes_per_sector], 1, lba+i);
+      d->read(&buf[(lba+i)*bpb->bytes_per_sector], bpb->bytes_per_sector/512, lba+i);
     }
     if(getfat(clus)>=0xffffff8)return;
     clus=getfat(clus);
@@ -117,7 +117,7 @@ struct fat_ent* fat::findfile(const char* n, int dir){
         }
       }
         
-      cns->puts("83 name=%s\n", name82);
+      //cns->puts("83 name=%s\n", name82);
     }
     if(i+1>=epc){
       if(getfat(dir)>=0xffffff8){
@@ -171,7 +171,7 @@ void fat::writecluschain(unsigned char* db, int clus, int size){
   }
   while(1){
     for(int i=0;i<bpb->sectors_per_cluster;i++){
-      d->write(&db[bpb->bytes_per_sector*i], 1, calcblock(clus)+i);
+      d->write(&db[bpb->bytes_per_sector*i], bpb->bytes_per_sector/512, calcblock(clus)+i);
     }
     writefat(clus, 0xffffff8);
     if(size<=bpc){
