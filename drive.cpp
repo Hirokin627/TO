@@ -5,6 +5,7 @@ namespace drvd{
   unsigned char bdmainaddr;
   unsigned char bdsubaddr;
   void init(EFI_DEVICE_PATH_PROTOCOL* bdp){
+    for(int i=0;i<256;i++)drvs[i]=0;
     cns->puts("Drive type=%d subtype=%d\n", bdp->Type, bdp->SubType);
     if(bdp->Type==3){
       if(bdp->SubType==5){

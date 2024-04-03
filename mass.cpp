@@ -179,8 +179,8 @@ void mass::comp(struct transfertrb* t){
     if(csw->sig!=0x53425355){
       asm("cli");
       cns->puts("invalid CSW=%x\n", csw->sig);
-      asm("sti");
       initphase=9;
+      asm("sti");
       controltrans(slot, 0b00100001, 0xff, 0, id.binterfacenumber, 0, 0, 0);
       //tr[slot][bulkin]->push((struct TRB*)intrb);
       //db[slot]=bulkin;
@@ -197,13 +197,14 @@ void mass::comp(struct transfertrb* t){
     controltrans(slot, 2, 1, 0, bulkin>>1, 0, 0, 0);
   }else if(initphase==10){
     initphase=11;
-    if((bulkin>>1)!=(bulkout>>1))controltrans(slot, 2, 1, 0, bulkout>>1, 0, 0, 0);
-    else controltrans(slot, 0b10100001, 0xfe, 0, id.binterfacenumber, 1, (unsigned long long)maxlun, 1);
+    controltrans(slot, 2, 1, 0, bulkout>>1, 0, 0, 0);
   }else if(initphase==11){
     outtrb->pointer=(unsigned long long)mycbw;
     outtrb->trbtransferlength=31;
     initphase=5;
+    asm("cli");
     tr[slot][bulkout]->push((struct TRB*)outtrb);
+    asm("sti");
     db[slot]=bulkout;
   }
 }

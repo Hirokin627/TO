@@ -103,13 +103,14 @@ EFI_STATUS EFIAPI UefiMain(EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST){
 	  Print(L"Length=%d\n", *(unsigned short*)test->Length);
 	  test=(EFI_DEVICE_PATH_PROTOCOL*)((unsigned long long)test+*(unsigned short*)test->Length);
 	}
-	
+	Print(L"base %p ptr=%p\n", gRT, &gRT->ResetSystem);
 	gBS->GetMemoryMap(&bsize, (EFI_MEMORY_DESCRIPTOR*)mems, &key, &dsize, &dv);
 	//Print(L"memory desc addr:%0lx\nMemory desc size: %0lx\nBuffe rsize=%0lx", (UINT64)mems, (UINTN)dsize, (UINTN)bsize);
 	gBS->ExitBootServices(IH, key);
 	typedef void ep(struct arg*);
 	ep* entry=(ep*)epp;
 	ai.Frame.fb=(int*)gop->Mode->FrameBufferBase;
+	ai.rtb=(unsigned long long)gRT;
 	ai.Frame.xsize=gop->Mode->Info->HorizontalResolution;
 	ai.Frame.ysize=gop->Mode->Info->VerticalResolution;
 	ai.acpi=acpi;
@@ -117,6 +118,7 @@ EFI_STATUS EFIAPI UefiMain(EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST){
 	ai.bsize=bsize;
 	ai.size=dsize;
 	ai.volume=v;
+	//gRT->ResetSystem(EfiResetCold, 0, 0, (VOID*)0);
 	entry(&ai);
 	while(1);
 	return 0;

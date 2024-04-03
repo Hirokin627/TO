@@ -170,6 +170,9 @@ void terminal::m(task* t){
               nd->createfs();
               //while(1)drvd::drvs[bdl]->read((unsigned char*)searchmem(512), 1, 0);
               //createf((const char*)fn);
+            }else if(!strcmp((const char*)cmdl, "touch")){
+              io_out8(0x70, 9);
+              cns->puts("test %d\n",io_in8(0x71)); 
             }else if(cmdl[0]!=0){
               struct fat_ent* fe=drvd::drvs[cmdl[1]==':' ? cmdl[0]-0x20 : bdl]->files->findfile((const char*)cmdl);;
               if(fe){

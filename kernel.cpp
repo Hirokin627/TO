@@ -108,6 +108,7 @@ extern "C" void nKernelmain(struct arg* ai){
   pci::init();
   pic_init();
   asm("cli");
+  rtcd::init();
   drvd::init(bdpp);
   ided::init();
   satad::init();
@@ -123,6 +124,11 @@ extern "C" void nKernelmain(struct arg* ai){
   //cns->l->updown(-1);
   timerd::init();
   ta=mtaskd::init();
+  console* dc=new console(80/8+1, 3);
+  layer* yd=dc->l;
+  dc->puts("0000/00/00\n00::00");
+  dc->l->slide(scrxsize-yd->bxsize, scrysize-32);
+  //dc->l->updown(layerd::top+1);
   layer* l=new layer(16, 16);
   l->col_inv=-1;
   static char cursor[16][17]={
@@ -256,7 +262,17 @@ extern "C" void nKernelmain(struct arg* ai){
             task* nt=new task((unsigned long long)testt);
             nt->run();
           }else if(k==0x1c){
-            io_out8(0x64, 0xfe);
+            //io_out8(0x64, 0xfe);
+            typedef enum{
+              EfiResetCold,
+              EfiResetWarm,
+              EfiResetShutdown,
+              EfiResetPlatformSpecific
+            } EFI_RESET_TYPE;
+            unsigned long long* rtb=(unsigned long long*)ai->rtb;
+            typedef unsigned long long rs(unsigned long long, unsigned long long,unsigned long long,unsigned long long);
+            rs* reset=(rs*)*(unsigned long long*)((unsigned long long)rtb+24+80);
+            reset(EfiResetCold, 0, 0, 0);
           }else if(k==3){
             acpi::shutdown();
           }else if(k==4){
@@ -331,6 +347,10 @@ extern "C" void nKernelmain(struct arg* ai){
         delete tm->tsk;
         delete tm->w;
         delete tm;
+      }else if(q==9){
+        using namespace rtcd;
+        //cns->puts("Year: %d month %d date %d hour %d minute %d second %d\n", y, m, d, h, mt, s);
+        dc->puts("%04d/%02d/%02d\n %02d:%02d.%02d\n", y, m, d, h, mt, s);
       }
     }
   }

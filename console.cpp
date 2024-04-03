@@ -36,10 +36,15 @@ void console::putsns(const char* str){
     ex=l->bxsize;
     ey+=16;
   }
-  if(ey>l->bysize){
+  /*if(ey>l->bysize){
     ey=l->bysize;
+  }*/
+  for(int i=0;str[i]!=0;i++){
+    putc(str[i], false);
+    if(str[i]=='\n'){
+      ey+=16;
+    }
   }
-  for(int i=0;str[i]!=0;i++)putc(str[i], false);
   l->refreshconfro(bx, by, ex, ey);
 }
 void console::nline(){

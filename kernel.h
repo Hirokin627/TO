@@ -296,6 +296,13 @@ class idedrv: public drive{
     int getsectorsize() override;
     unsigned char addr;
 };
+class idecdrv : public drive{
+  public:
+    idecdrv(unsigned char addr);
+    void phyread(unsigned char* buf, unsigned int lba512);
+    void read(unsigned char* buf, unsigned int cnt, unsigned int lba512, unsigned int pn=0) override;
+    unsigned char addr;
+};
 class fs{
   public:
     fs();
@@ -344,6 +351,7 @@ class fat : public fs{
     void generatee(struct fat_ent* e, const char* n, int dir);
     struct fat_ent* getnext(struct fat_ent* e, int dir);
     unsigned int getchainsize(int c);
+    const char* setmustdir(const char* name, int *dir);
     void writef(struct fat_ent* f, unsigned char* buf, int size, int dir=0) override;
     unsigned int getfat(unsigned int ind) override;
     unsigned int calcblock(unsigned int clus) override;
@@ -448,6 +456,10 @@ namespace satad{
 };
 namespace ided{
   void init();
+};
+namespace rtcd{
+  void init();
+  extern unsigned short y,m,d,h,mt,s;
 };
 extern "C"{
   void setcr3(unsigned long long*);

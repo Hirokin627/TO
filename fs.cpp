@@ -48,7 +48,6 @@ void fat::preparecluschain(unsigned int clus){
   }
 }
 struct fat_ent* fat::findfile(const char* n, int dir){
-  if(dir==0)dir=bpb->root_cluster;
   if(n[1]==':'){
     char drv=n[0];
     if(drv>=0x60)drv-=0x20;
@@ -58,6 +57,7 @@ struct fat_ent* fat::findfile(const char* n, int dir){
     if(drvd::drvs[drv])return drvd::drvs[drv]->files->findfile((const char*)&n[3]);
     else return 0;
   }
+  /*if(dir==0)dir=bpb->root_cluster;
   char* nb=(char*)searchmem(strlen(n));
   strcpy(nb, n);
   int md=0;
@@ -80,7 +80,8 @@ struct fat_ent* fat::findfile(const char* n, int dir){
   }
   if(md){
     strcpy(nb, &nb[sp]);
-  }
+  }*/
+  char* nb=(char*)setmustdir(n, &dir);
   preparecluschain(dir);
   //cns->puts("final name=%s\n", nb);
   struct fat_ent* de=(struct fat_ent*)getclusaddr(dir);
@@ -246,12 +247,12 @@ void fat::generatee(struct fat_ent* e, const char* n, int dir){
   e->attr=0x20;
   writecluschain(0, dir, getchainsize(dir));
 }
-struct fat_ent* fat::createe(const char* n, int dir){
-  if(dir==0)dir=bpb->root_cluster;
+const char* fat::setmustdir(const char* n, int* dir){
+  if(*dir==0)*dir=bpb->root_cluster;
   if(n[1]==':'){
     char drv=n[0];
     if(drv>=0x60)drv-=0x40;
-    if(drvd::drvs[drv])return drvd::drvs[drv]->files->findfile((const char*)&n[3]);
+    //if(drvd::drvs[drv])return drvd::drvs[drv]->files->findfile((const char*)&n[3]);
     else return 0;
   }
   char* nb=(char*)searchmem(strlen(n));
@@ -266,17 +267,24 @@ struct fat_ent* fat::createe(const char* n, int dir){
   }
   int sp=0;
   for(int i=0;i<md;i++){
-    struct fat_ent* f=findfile((const char*)&nb[sp], dir); 
+    struct fat_ent* f=findfile((const char*)&nb[sp], *dir); 
     if(f==0){
       freemem((unsigned long long)nb);
       return 0;
     }
-    dir=f->getclus();
+    *dir=f->getclus();
     sp+=strlen((const char*)&nb[sp])+1;
   }
   if(md){
     strcpy(nb, &nb[sp]);
   }
+  return nb;
+}
+struct fat_ent* fat::createe(const char* n, int dir){
+  if(n[1]==':'){
+    drvd::drvs[n[0]>0x60 ? n[0]-0x20 : n[0]]->files->createe((const char*)&n[3], dir);
+  }
+  const char* nb=setmustdir(n, &dir);
   preparecluschain(dir);
   int b=0,c=0;
   int me=(strlen(nb)+25)/13;

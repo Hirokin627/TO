@@ -128,6 +128,7 @@ namespace xhci{
   stt.target=0;
   if(wlength<=0)stt.ioc=1;
   tr[slot][0]->push((struct TRB*)&stt);
+  asm("sti");
   db[slot]=1;
 }
   unsigned int decideintf(unsigned int slot, unsigned int ep){
@@ -383,14 +384,15 @@ namespace xhci{
           //cns->puts("Not suported\n");
         }
         slots[slot].phase=setconf;
-        struct confeptrb cept{};
-        for(int i=0;i<2;i++)*(unsigned long long*)((unsigned long long)&cept+i*8)=0;
-        cept.type=12;
+        struct confeptrb* cept=new struct confeptrb;
+        for(int i=0;i<2;i++)*(unsigned long long*)((unsigned long long)cept+i*8)=0;
+        cept->type=12;
         //cns->puts("CONF EP SLOT=%d icc=%0llx\n", slot, icc);
-        cept.slot=slot;
-        cept.dc=0;
-        cept.pointer=(unsigned long long)icc;
-          cr->push((struct TRB*)&cept);
+        cept->slot=slot;
+        cept->dc=0;
+        cept->pointer=(unsigned long long)icc;
+          cr->push((struct TRB*)cept);
+          delete cept;
           db[0]=0;
       }
     }else if(slots[slot].phase==setconf){
