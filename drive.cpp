@@ -40,6 +40,16 @@ namespace drvd{
       if(mainaddr==bdmainaddr){
         if(subaddr==bdsubaddr){
           bdl=dl;
+          asm("cli");
+          unsigned char* b=(unsigned char*)searchmem(512);
+          drv->read(b, 1, 0);
+          for(int i=0;i<512/16;i++){
+            for(int j=0;j<16;j++){
+              cns->puts("%02x ", b[i*16+j]); 
+            }
+            cns->nline();
+          }
+          freemem((unsigned long long)b);
         }
       }
     }
