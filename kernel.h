@@ -196,6 +196,7 @@ class layer{
     unsigned int flags;
     layer* slaves[256];
     layer* master;
+    event* oncrick;
 };
 class console{
   public:
@@ -207,8 +208,11 @@ class console{
     void putsns(const char* str);
     void puts(const char* format,...);
     void nline();
+    unsigned int fc;
+    int bc;
     int lines,rows;
     layer* l;
+    char buf[60];
     int cx,cy;
 };
 class terminal;
@@ -253,6 +257,18 @@ class window{
     layer* edge;
     layer* tb;
     task* owner;
+};
+typedef void event(unsigned long long obj);
+class button{
+  public:
+    button(int, int, const char* label=0);
+    layer* l;
+};
+class textbox{
+  public:
+    textbox(unsigned csize);
+    layer* l;
+    console* c;
 };
 class timer{
   public:
@@ -407,6 +423,7 @@ namespace layerd{
 namespace graphic{
   void drawbox(layer* l, int c, int x0, int y0, int x1, int y1, bool nf=true);
   void putfont(layer* l, int c, int bx, int by, char chr, bool nf=true);
+  void putfontstr(layer* l, int c, int bx, int by, const char* str, bool nf=true);
 };
 namespace pci{
   void init();

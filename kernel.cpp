@@ -173,6 +173,18 @@ extern "C" void nKernelmain(struct arg* ai){
   window* mw;
   int mpx,mpy;
   asm("cli");
+  const char* sbl="shutdown";
+  button* btn=new button(8*strlen(sbl)+6, 16+2, sbl);
+  btn->l->oncrick=(event*)acpi::shutdown;
+  btn->l->slide(3, scrysize-24+2);
+  window* tw=new window(400, 400);
+  textbox* tbx=new textbox(60);
+  //tbx->l->updown(tw->cs->height);
+  tw->cs->registss(tbx->l);
+  tbx->l->updown(tw->cs->manye-1);
+  //tbx->l->updown(tw->cs->height);
+  //tw->cs->registss(tbx->l);
+  tbx->l->slide(30, 30);
   xhci::init();
   unsigned char bk[256];
   unsigned char fo=0;
@@ -199,6 +211,7 @@ extern "C" void nKernelmain(struct arg* ai){
             mpy+=y;
           }
           layer* l=layerd::checkcrick(mx, my);
+            if(l&&l->oncrick)l->oncrick((unsigned long long)l);
           if(!(l->flags&ITS_WINDOW))l=0;
           layer* lcs=0;
           if(l){

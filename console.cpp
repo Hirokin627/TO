@@ -3,12 +3,16 @@ console::console(int line, int row){
   lines=line;
   rows=row;
   l=new layer(line*8, row*16);
+  fc=0xffffff;
+  bc=-1;
+  graphic::drawbox(l, bc, 0, 0, l->bxsize-1, l->bysize-1);
+  l->col_inv=-1;
   l->updown(layerd::top+1);
 }
 void console::putc(char chr, bool nf){
   switch(chr){
     default:
-      graphic::putfont(l, 0xffffff, cx, cy, chr, nf);
+      graphic::putfont(l, fc, cx, cy, chr, nf);
       cx+=8;
       if(cx>=l->bxsize){
         nline();
@@ -18,7 +22,7 @@ void console::putc(char chr, bool nf){
     case '\b':
       if(cx>0){
         cx-=8;
-        graphic::drawbox(l, 0, cx, cy, cx+7, cy+15, true);
+        graphic::drawbox(l, bc, cx, cy, cx+7, cy+15, true);
       }
       break;
     case '\n':
@@ -56,7 +60,7 @@ void console::nline(){
         l->buf[y*l->bxsize+x]=l->buf[(y+16)*l->bxsize+x];
       }
     }
-    graphic::drawbox(l, 0, 0, l->bysize-16, l->bxsize-1, l->bysize-1);
+    graphic::drawbox(l, bc, 0, l->bysize-16, l->bxsize-1, l->bysize-1);
     l->refresh();
     cy-=16;
   }

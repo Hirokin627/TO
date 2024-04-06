@@ -17,12 +17,12 @@ namespace layerd{
     graphic::drawbox(bl, 0xffffff, 0, scrysize-27, scrxsize-1, scrysize-27);
     graphic::drawbox(bl, 0xc6c6c6, 0, scrysize-26, scrxsize-1, scrysize-1);
     
-    graphic::drawbox(bl, 0xffffff, 3, scrysize-24, 59, scrysize-24);
+    /*graphic::drawbox(bl, 0xffffff, 3, scrysize-24, 59, scrysize-24);
     graphic::drawbox(bl, 0xffffff, 2, scrysize-24, 2, scrysize-4);
     graphic::drawbox(bl, 0x848484, 3, scrysize-4, 59, scrysize-4);
     graphic::drawbox(bl, 0x848484, 59, scrysize-23, 59, scrysize-5);
     graphic::drawbox(bl, 0x000000, 2, scrysize-3, 59, scrysize-3);
-    graphic::drawbox(bl, 0x000000, 60, scrysize-24, 60, scrysize-3);
+    graphic::drawbox(bl, 0x000000, 60, scrysize-24, 60, scrysize-3);*/
     
     graphic::drawbox(bl, 0x848484, scrxsize-47, scrysize-24, scrxsize-4, scrysize-24);
     graphic::drawbox(bl, 0x848484, scrxsize-47,scrysize-23, scrxsize-47, scrysize-4);
@@ -106,6 +106,7 @@ void layer::updown(int nheight){
     if(old>=master->height)nheight++;
     if(master->height==-1)nheight=-1;
   }
+  asm("cli");
   if(old<nheight){
     if(old>=0){
       for(int i=old;i<nheight;i++){
