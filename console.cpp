@@ -3,6 +3,7 @@ console::console(int line, int row){
   lines=line;
   rows=row;
   l=new layer(line*8, row*16);
+  l->flags|=ITS_CONSOLE;
   fc=0xffffff;
   bc=-1;
   graphic::drawbox(l, bc, 0, 0, l->bxsize-1, l->bysize-1);
@@ -44,12 +45,12 @@ void console::putsns(const char* str){
     ey=l->bysize;
   }*/
   for(int i=0;str[i]!=0;i++){
-    putc(str[i], false);
+    putc(str[i], true);
     if(str[i]=='\n'){
       ey+=16;
     }
   }
-  l->refreshconfro(bx, by, ex, ey);
+  //l->refreshconfro(bx, by, ex, ey);
 }
 void console::nline(){
   cy+=16;

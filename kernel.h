@@ -31,6 +31,9 @@ typedef struct {
 #define ITS_CS 4
 #define ITS_TB 8
 #define ITS_MADE_FOR_APP 16
+#define ITS_BUTTON 32
+#define ITS_TEXTBOX 64
+#define ITS_CONSOLE 128
 class console;
 class fifo;
 class task;
@@ -58,6 +61,16 @@ struct IDT{
 	unsigned int o_h;
 	unsigned int rsv;
 }__attribute__((packed));
+struct profile{
+  unsigned char sig[4];
+  unsigned int bc;
+  profile(){
+    sig[0]='U';
+    sig[1]='S';
+    sig[2]='E';
+    sig[3]='R';
+  }
+};
 typedef struct {
 char drv;
 char* ptr;
@@ -352,6 +365,8 @@ class fs{
     virtual struct fat_ent* createe(const char* n, int dir=0){
       return 0;
     };
+    virtual void loadfile(struct fat_ent* f, unsigned char* b){
+    };
     unsigned int rc;
     unsigned char dl;
     unsigned char* ff;
@@ -377,6 +392,7 @@ class fat : public fs{
     struct fat_ent* findfile(const char* n, int dir=0) override;
     void writecluschain(unsigned char* buf, int clus, int size) override;
     struct fat_ent* createe(const char* n, int dir=0) override;
+    void loadfile(struct fat_ent* f, unsigned char* b)override;
     struct BPB* bpb;
     unsigned int* fats;
 };
@@ -388,6 +404,7 @@ class terminal{
   public:
     void m(task* t);
     char getc();
+    unsigned char* gets();
     console* cns;
     window* w;
     task* tsk;
@@ -418,6 +435,7 @@ namespace layerd{
   void refreshsub(int x0, int y0, int x1, int y1);
   void trefreshsub(int x0, int y0, int x1, int y1);
   extern int top;
+  extern layer* bl;
   layer* checkcrick(int mx, int my);
 };
 namespace graphic{

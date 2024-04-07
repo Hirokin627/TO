@@ -9,6 +9,7 @@ extern "C" caddr_t sbrk(size_t size){
 }
 int mx,my;
 window* nowb;
+textbox* nowt;
 alignas(16) struct tc taska,taskb;
 
 const char keytable0[0x80]={
@@ -112,7 +113,6 @@ extern "C" void nKernelmain(struct arg* ai){
   drvd::init(bdpp);
   ided::init();
   satad::init();
-  cns->puts("MSR=%x\n", readmsr(0xc0000080));
   ps2::init();
   taskb.cr3=(unsigned long long)getcr3();
   taskb.rip=(unsigned long long)testt;
@@ -178,7 +178,7 @@ extern "C" void nKernelmain(struct arg* ai){
   btn->l->oncrick=(event*)acpi::shutdown;
   btn->l->slide(3, scrysize-24+2);
   window* tw=new window(400, 400);
-  textbox* tbx=new textbox(60);
+  textbox* tbx=new textbox(30);
   //tbx->l->updown(tw->cs->height);
   tw->cs->registss(tbx->l);
   tbx->l->updown(tw->cs->manye-1);
@@ -212,12 +212,20 @@ extern "C" void nKernelmain(struct arg* ai){
           }
           layer* l=layerd::checkcrick(mx, my);
             if(l&&l->oncrick)l->oncrick((unsigned long long)l);
-          if(!(l->flags&ITS_WINDOW))l=0;
           layer* lcs=0;
           if(l){
-            lcs=l->master? l->master : l;
+            lcs=l;
+            while(lcs->master){ 
+              lcs=lcs->master;
+            }
           }
-          if((nowb->cs!=lcs)&&!mw){
+          if(l&&(l->flags&ITS_TEXTBOX)){
+            if(l->flags&ITS_CONSOLE)l=l->master;
+            textbox* t=(textbox*)l->wc;
+            nowt=t;
+          }
+          //if(!(l->flags&ITS_WINDOW))l=0;
+          if(nowb&&(nowb->cs!=lcs)&&!mw){
             nowb->setactive(false);
           }
           if(l&&!mw){
@@ -226,15 +234,19 @@ extern "C" void nKernelmain(struct arg* ai){
               mpx=x;
               mpy=y;
             }
-            if(l->master)l=l->master;
-            nowb=l->wc;
-            nowb->cs->updown(layerd::top-1);
-            nowb->setactive(true);
+            if(l->master)l=lcs;
+            nowb=l ? lcs->wc : 0;
+            //cns->puts("nowb->cs->height=%d(lcs=%p)\n", nowb->cs->height, lcs);
+            if(nowb){
+              nowb->cs->updown(layerd::top-1);
+              nowb->setactive(true);
+            }
           }
           if(!l&&!mw){
             if(nowb){
               nowb->setactive(false);
               nowb=0;
+              nowt=0;
             }
           }
         }else{
@@ -310,6 +322,12 @@ extern "C" void nKernelmain(struct arg* ai){
             t->ct->rdi=(unsigned long long)t;
             t->run();
           }
+        }
+         if(nowt&&!(k&0x80)){
+          if(keytable0[k]=='\n'){
+            nowt=0;
+          }
+          if(nowt)nowt->c->putc(keytable0[k]);
         }
       }else if(q==5){
         unsigned long long p=kernelbuf->read();

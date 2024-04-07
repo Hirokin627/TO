@@ -207,6 +207,24 @@ struct fat_ent* fat::getnext(struct fat_ent* e, int dir){
     return &e[1];
   }
 }
+void fat::loadfile(struct fat_ent* f, unsigned char* b){
+  unsigned int bpc=bpb->sectors_per_cluster*bpb->bytes_per_sector;
+  unsigned int clus=f->getclus();
+  cns->puts("clus=%d lba=%x\n", f->getclus(), calcblock(clus));
+  if(f->getclus()==0)return;
+  preparecluschain(clus);
+  unsigned int size=f->filesize;
+  while(1){
+    for(int i=0;i<bpc;i++){
+      b[i]=buf[calcblock(clus)*bpb->bytes_per_sector+i];
+    }
+    unsigned int nc=getfat(clus);
+    if(nc>=0xffffff8)return;
+    clus=nc;
+    size-=bpc;
+    b+=bpc;
+  }
+}
 unsigned char calcsum(struct fat_ent* e){
   unsigned char sum=0;
   for(int i=0;i<11;i++){

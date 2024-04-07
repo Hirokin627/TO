@@ -24,12 +24,38 @@ char terminal::getc(){
     }
   }
 }
+#include <stdlib.h>
+unsigned char* terminal::gets(){
+  asm("cli");
+  unsigned char* sb=(unsigned char*)searchmem(60);
+  int p=0;
+  while(1){
+    unsigned char chr=getc();
+    if(!(chr&0x80)){
+      chr=keytable0[chr];
+      if(chr=='\n'){
+        sb[p]=0;
+        break;
+      }else if(chr=='\b'){ 
+        sb[p]=0;
+        p--;
+        sb[p]=0;
+        p--;
+      }else{
+        sb[p]=chr;
+        cns->putc(chr);
+      }
+      p++;
+    }
+  }
+  return sb;
+}
 void terminal::m(task* t){
   asm("cli");
   //cns->puts("terminal called\n");
   tsk=t;
   t->tm=this;
-  int line=60;
+  int line=64;
   int rows=15;
   w=new window(line*8+2, rows*16+2);
   w->owner=t;
@@ -46,17 +72,23 @@ void terminal::m(task* t){
   int lp=0;
   char runningapp=0;
   t->tm=this;
+  cns->puts("User: ");
+  unsigned char* un=gets();
+    struct fat_ent* fe=drvd::drvs[bdl]->files->findfile((const char*)un);
+    if(!fe)cns->puts("filenotf\n");
+    struct profile* pf=new struct profile;
+  if(!strcmp((const char*)un, "")){
+    
+  }else{
+    pf->sig[0]=0;
+    drvd::drvs[bdl]->files->loadfile(fe, (unsigned char*)pf);
+    cns->puts("sig=%s", pf);
+    graphic::drawbox(layerd::bl, pf->bc, 0, 0, scrxsize-1, scrysize-29);
+  }
   cns->puts(">");
   cns->l->refresh();
   while(1){
-    asm("cli");
-    if(f->len==0){
-      t->sleep();
-    }else{
-      int q=f->read();
-      //cns->puts("q=%d\n", q);
-      if(q==2){
-        unsigned char k=f->read();
+        unsigned char k=getc();
         if(!(k&0x80)){
           if(keytable0[k]=='\n'){
             cns->nline();
@@ -86,7 +118,7 @@ void terminal::m(task* t){
                   f_arg[0]=0;
                   goto retry;
                 }
-                  efd=drvd::drvs[dl]->files->findfile((const char*)f_arg);\
+                  efd=drvd::drvs[dl]->files->findfile((const char*)f_arg);
               }
               drvd::drvs[dl]->files->preparecluschain(efd->getclus());
               struct fat_ent* de=(struct fat_ent*)drvd::drvs[dl]->files->getclusaddr(efd->getclus());
@@ -154,7 +186,7 @@ void terminal::m(task* t){
               kernelbuf->write(8);
               kernelbuf->write((unsigned long long)tm);
             }else if(!strcmp((const char*)cmdl, "clear")){
-              graphic::drawbox(cns->l, cns->l->col_inv, 0, 0, cns->l->bxsize-1, cns->l->bysize-1);
+              graphic::drawbox(cns->l, cns->bc, 0, 0, cns->l->bxsize-1, cns->l->bysize-1);
               cns->cx=cns->cy=0;
             }else if(!strcmp((const char*)cmdl, "install")){
               cns->puts("select drive:\n");
@@ -165,11 +197,33 @@ void terminal::m(task* t){
               }
               cns->nline();
               char d=keytable0[getc()]-0x20;
-              cns->puts("Selected: %c bps=%x\n", d, drvd::drvs[d]->bpb);
-              drive* nd=drvd::drvs[d];
-              nd->createfs();
+              if(drvd::drvs[d]){
+                cns->puts("Selected: %c bps=%x\n", d, drvd::drvs[d]->bpb);
+                drive* nd=drvd::drvs[d];
+                nd->createfs();
+              cns->puts("enter your back ground color:\n");
+              unsigned char* cb=gets();
+              unsigned int bc=strtoll((const char*)cb, (char**)NULL, 16);
+              //cns->bc=bc;
+              graphic::drawbox(layerd::bl, bc, 0, 0, scrxsize-1, scrysize-29);
+              struct profile* pf=new struct profile;
+              pf->bc=bc;
+              struct fat_ent* f=drvd::drvs[d]->files->createe("administrator");
+              drvd::drvs[d]->files->writef(f, (unsigned char*)pf, sizeof(struct profile));
+              asm("cli");
+              freemem((unsigned long long)cb);
+              }
               //while(1)drvd::drvs[bdl]->read((unsigned char*)searchmem(512), 1, 0);
               //createf((const char*)fn);
+            }else if(!strcmp((const char*)cmdl, "chgc")){
+              if(fe){
+                unsigned char* cb=gets();
+                unsigned int c=strtoll((const char*)cb, (char**)NULL, 16);
+                graphic::drawbox(layerd::bl, c, 0, 0, scrxsize-1, scrysize-29);
+                pf->bc=c;
+                drvd::drvs[bdl]->files->writef(fe, (unsigned char*)pf, sizeof(struct profile));
+                freemem((unsigned long long)cb);
+              }
             }else if(!strcmp((const char*)cmdl, "touch")){
               io_out8(0x70, 9);
               cns->puts("test %d\n",io_in8(0x71)); 
@@ -236,8 +290,5 @@ void terminal::m(task* t){
             }
           }
         }
-        //cns->puts("key=%02x\n", k);
-      }
-    }
   }
 }

@@ -7,6 +7,7 @@ namespace ided{
   }
   unsigned char sendcmd(unsigned char p2, unsigned char p3, unsigned char p4, unsigned char p5, unsigned char p6, unsigned char p7){
     while(io_in8(0x1f7)&0x80){
+      if(io_in8(0x1f7)&1)return io_in8(0x1f7);
     }
     io_out8(0x1f6, p6);
     io_out8(0x1f2, p2);
@@ -51,7 +52,7 @@ namespace ided{
         cns->puts("bpb=%x lba=%x\n", bpb, lba); 
         idecdrv* drv=new idecdrv(addr);
         drv->bpb=bpb;
-        if(lba<0xffffffff)drvd::registdrv(1, 0, addr, (drive*)drv);
+        if(lba<0xffffffff&&lba)drvd::registdrv(1, 0, addr, (drive*)drv);
       }else{
         cns->puts("error code=%02x\n", io_in8(0x1f7));
       }

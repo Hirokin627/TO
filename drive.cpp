@@ -103,11 +103,15 @@ void drive::createfs(){
   fat[0]=0xffffff8;
   fat[1]=0xfffffff;
   for(int i=0;i<0x364;i++){
-    write((unsigned char*)fat+i, 1, 0x20+i);
+    asm("cli");
     if(i%9==0){
-      cns->puts("%d%%\n", i/9);
+      cns->puts("\b\b\b%02d%%", i/9+4);
+      asm("sti\nhlt");
     }
+    write((unsigned char*)fat+i, 1, 0x20+i);
+    
   }
+  cns->nline();
   delete files;
   files=new class fat;
   fs* fls=drvd::drvs[bdl]->files;
