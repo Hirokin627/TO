@@ -72,19 +72,6 @@ void terminal::m(task* t){
   int lp=0;
   char runningapp=0;
   t->tm=this;
-  cns->puts("User: ");
-  unsigned char* un=gets();
-    struct fat_ent* fe=drvd::drvs[bdl]->files->findfile((const char*)un);
-    if(!fe)cns->puts("filenotf\n");
-    struct profile* pf=new struct profile;
-  if(!strcmp((const char*)un, "")){
-    
-  }else{
-    pf->sig[0]=0;
-    drvd::drvs[bdl]->files->loadfile(fe, (unsigned char*)pf);
-    cns->puts("sig=%s", pf);
-    graphic::drawbox(layerd::bl, pf->bc, 0, 0, scrxsize-1, scrysize-29);
-  }
   cns->puts(">");
   cns->l->refresh();
   while(1){
@@ -216,17 +203,22 @@ void terminal::m(task* t){
               //while(1)drvd::drvs[bdl]->read((unsigned char*)searchmem(512), 1, 0);
               //createf((const char*)fn);
             }else if(!strcmp((const char*)cmdl, "chgc")){
-              if(fe){
+              //if(fe){
+              struct fat_ent* fe=drvd::drvs[bdl]->files->findfile((const char*)cuser);
+              struct profile* pf=new struct profile;
+              drvd::drvs[bdl]->files->loadfile(fe, (unsigned char*)pf);
                 unsigned char* cb=gets();
                 unsigned int c=strtoll((const char*)cb, (char**)NULL, 16);
                 graphic::drawbox(layerd::bl, c, 0, 0, scrxsize-1, scrysize-29);
                 pf->bc=c;
                 drvd::drvs[bdl]->files->writef(fe, (unsigned char*)pf, sizeof(struct profile));
                 freemem((unsigned long long)cb);
-              }
+              //}
             }else if(!strcmp((const char*)cmdl, "touch")){
-              io_out8(0x70, 9);
-              cns->puts("test %d\n",io_in8(0x71)); 
+              unsigned char* n=gets();
+              drvd::drvs[bdl]->files->createe((const char*)n);
+              asm("cli");
+              freemem((unsigned long long)n);
             }else if(cmdl[0]!=0){
               struct fat_ent* fe=drvd::drvs[cmdl[1]==':' ? cmdl[0]-0x20 : bdl]->files->findfile((const char*)cmdl);;
               if(fe){

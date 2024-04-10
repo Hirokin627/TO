@@ -47,6 +47,8 @@ extern window* nowb;
 extern console* cns;
 extern fifo* kernelbuf;
 extern int mx,my;
+extern int termlock;
+extern char cuser[60];
 typedef unsigned long addr_t;
 typedef void event(unsigned long long obj);
 struct pcid{
@@ -209,6 +211,7 @@ class layer{
     unsigned int flags;
     layer* slaves[256];
     layer* master;
+    unsigned long long owner;
     event* oncrick;
 };
 class console{
@@ -265,6 +268,11 @@ class fifo{
 class window{
   public:
     window(int,int);
+    ~window(){
+      delete cs;
+      delete edge;
+      delete tb;
+    };
     void setactive(bool ac);
     layer* cs;
     layer* edge;
@@ -275,13 +283,22 @@ typedef void event(unsigned long long obj);
 class button{
   public:
     button(int, int, const char* label=0);
+    ~button(){
+      delete l;
+    };
     layer* l;
 };
 class textbox{
   public:
     textbox(unsigned csize);
+    ~textbox(){
+      delete l;
+      delete c;
+    };
     layer* l;
     console* c;
+    char chrs[60];
+    int chrp;
 };
 class timer{
   public:

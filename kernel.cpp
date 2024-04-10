@@ -41,6 +41,8 @@ void testt(){
     //switchcont(&taska, &taskb);
   }
 }
+int termlock=0;
+char cuser[60];
 unsigned char dp[44];
 unsigned char bdl=0;
 EFI_DEVICE_PATH_PROTOCOL* bdpp=(EFI_DEVICE_PATH_PROTOCOL*)dp;
@@ -53,6 +55,46 @@ void setvgaregister(unsigned short port, unsigned char index, unsigned char d){
 unsigned char readvgaregister(unsigned short port, unsigned char index){  
   io_out8(port, index);
   return io_in8(port+1);
+}
+class logform;
+void login(logform* form);
+class logform{
+  public:
+    window* w;
+    textbox* tbx;
+    button* btn;
+    logform(){
+      w=new window(400, 400);
+      tbx=new textbox(30);
+      w->cs->registss(tbx->l);
+      tbx->l->slide(30, 30);
+      btn=new button(40+6, 18, "login");
+      w->cs->registss(btn->l);
+      btn->l->slide(300, 50);
+      btn->l->oncrick=(event*)login;
+      btn->l->owner=(unsigned long long)this;
+    }
+};
+void login(logform* form){
+  cns->puts("login proccess start(username=%s)\n", nowt->chrs);
+  struct fat_ent* fe=drvd::drvs[bdl]->files->findfile((const char*)nowt->chrs);
+  if(fe){
+    struct profile* pf=new struct profile;
+    drvd::drvs[bdl]->files->loadfile(fe, (unsigned char*)pf);
+    if(!strncmp((const char*)pf->sig, "USER", 4)){
+      asm("cli");
+      delete form->w;
+      delete form->tbx;
+      cns->puts("this is user file!\n");
+      strcpy(cuser, (const char*)nowt->chrs);
+      unsigned int bc=pf->bc;
+      graphic::drawbox(layerd::bl, bc, 0, 0, scrxsize-1, scrysize-29);
+      termlock=0;
+      //delete form->w->cs;
+      //delete form->tbx->l;
+      //delete form->btn->l;
+    }
+  }
 }
 extern "C" void nKernelmain(struct arg* ai){
   cli();
@@ -174,17 +216,11 @@ extern "C" void nKernelmain(struct arg* ai){
   int mpx,mpy;
   asm("cli");
   const char* sbl="shutdown";
+  termlock=1;
   button* btn=new button(8*strlen(sbl)+6, 16+2, sbl);
   btn->l->oncrick=(event*)acpi::shutdown;
   btn->l->slide(3, scrysize-24+2);
-  window* tw=new window(400, 400);
-  textbox* tbx=new textbox(30);
-  //tbx->l->updown(tw->cs->height);
-  tw->cs->registss(tbx->l);
-  tbx->l->updown(tw->cs->manye-1);
-  //tbx->l->updown(tw->cs->height);
-  //tw->cs->registss(tbx->l);
-  tbx->l->slide(30, 30);
+  logform* lf=new logform;
   xhci::init();
   unsigned char bk[256];
   unsigned char fo=0;
@@ -211,7 +247,6 @@ extern "C" void nKernelmain(struct arg* ai){
             mpy+=y;
           }
           layer* l=layerd::checkcrick(mx, my);
-            if(l&&l->oncrick)l->oncrick((unsigned long long)l);
           layer* lcs=0;
           if(l){
             lcs=l;
@@ -234,8 +269,8 @@ extern "C" void nKernelmain(struct arg* ai){
               mpx=x;
               mpy=y;
             }
-            if(l->master)l=lcs;
-            nowb=l ? lcs->wc : 0;
+            //(l->master)l=lcs;
+            nowb=l->master ? lcs->wc : l->wc;
             //cns->puts("nowb->cs->height=%d(lcs=%p)\n", nowb->cs->height, lcs);
             if(nowb){
               nowb->cs->updown(layerd::top-1);
@@ -249,6 +284,7 @@ extern "C" void nKernelmain(struct arg* ai){
               nowt=0;
             }
           }
+            if(l&&l->oncrick)l->oncrick(l->owner ? l->owner : (unsigned long long)l);
         }else{
           if(mw){
             mw->cs->slide(mw->cs->x+mpx, mw->cs->y+mpy);
@@ -316,7 +352,7 @@ extern "C" void nKernelmain(struct arg* ai){
             }
             closedir(d);*/
           }else if(k==6&&drvd::drvs[bdl]){
-          }else if(k==7){
+          }else if(k==7&&!termlock){
             asm("cli");
             task* t=new task((unsigned long long)terminald::main);
             t->ct->rdi=(unsigned long long)t;
@@ -327,7 +363,22 @@ extern "C" void nKernelmain(struct arg* ai){
           if(keytable0[k]=='\n'){
             nowt=0;
           }
-          if(nowt)nowt->c->putc(keytable0[k]);
+          if(nowt){
+            nowt->c->putc(keytable0[k]);
+            char chr=keytable0[k];
+            switch(chr){
+              case '\b':
+                if(nowt->chrp>0){
+                  nowt->chrp--;
+                  nowt->chrs[nowt->chrp]=0;
+                }
+                break;
+              default:
+                nowt->chrs[nowt->chrp]=chr;
+                nowt->chrp++;
+                break;
+            }
+          }
         }
       }else if(q==5){
         unsigned long long p=kernelbuf->read();

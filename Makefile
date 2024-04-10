@@ -20,6 +20,8 @@ haribote.img: kernel.o $(BLD)
 	rm -f test.txt
 	sudo mkdir -p img/efi/boot
 	sudo touch img/skiplog
+	sudo echo USER > root
+	sudo mv root img/
 	sudo mkdir -p img/info
 	sudo mkdir -p img/passwords
 	sudo mkdir -p img/test1/test2/test3
