@@ -3,7 +3,7 @@ LDFLAGS  += --entry Kernelmain -z norelro  --static
 aLDFLAGS  += --entry Kernelmain -z norelro --image-base 0x1000000 --static
 EBD=~/edk2/Build
 BLD=$(EBD)/LoadPkg/DEBUG_GCC5/X64/bootloader.efi
-objs= asm2.obj kernel.obj asm.obj x64.obj memory.obj layer.obj graphic.obj pci.obj console.obj xhci.obj pic.obj fifo.obj hid.obj ps2.obj window.obj timer.obj mass.obj mtask.obj terminal.obj acpi.obj drive.obj fs.obj api.obj sata.obj ide.obj rtc.obj textbox.obj button.obj
+objs= asm2.obj kernel.obj asm.obj x64.obj memory.obj layer.obj graphic.obj pci.obj console.obj xhci.obj pic.obj fifo.obj hid.obj ps2.obj window.obj timer.obj mass.obj mtask.obj terminal.obj acpi.obj drive.obj fs.obj api.obj sata.obj ide.obj rtc.obj textbox.obj button.obj pcnet.obj ip.obj udp.obj
 
 objs2=load.obj asm.obj memory.obj x64.obj
 all: 

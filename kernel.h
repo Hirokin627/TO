@@ -513,6 +513,55 @@ namespace rtcd{
   void init();
   extern unsigned short y,m,d,h,mt,s;
 };
+namespace udpd{
+  void recieve(void* pbuf, unsigned short len);
+  void send(void* pbuf, unsigned short len, unsigned int tip, unsigned short fport, unsigned short tport);
+};
+
+namespace ipd{
+  void sendIP(unsigned char protocol, unsigned short len, unsigned char* data, unsigned char dest[4]);
+  void recieve(void* buf, unsigned short len);
+  unsigned long long convertbig(void* p, unsigned int size);
+  unsigned long long conve(unsigned long long v, unsigned int size);
+};
+extern unsigned int lip;
+  struct IPPacket{
+    unsigned char hlen:4;
+    unsigned char ver:4;
+    unsigned char ecn:2;
+    unsigned char dscp:6;
+    unsigned short totall;
+    unsigned short fragment;
+    unsigned char flags:4;
+    unsigned short fragmentoff:12;
+    unsigned char ttl;
+    unsigned char protocol;
+    unsigned short headercheck;
+    unsigned char sip[4];
+    unsigned char dip[4];
+    //unsigned int option:24;
+    IPPacket(unsigned short datalen){
+      ver=4;
+      hlen=sizeof(struct IPPacket)/4;
+      totall=sizeof(struct IPPacket)+datalen;
+      ttl=100;
+      *(unsigned int*)sip=ipd::conve(lip, 4);
+    };
+  }__attribute__((packed));
+  struct UDPPacket{
+    unsigned char fip[4];
+    unsigned char tip[4];
+    unsigned short fromp;
+    unsigned short top;
+    unsigned short len;
+    unsigned short checksum;
+  }__attribute__((packed));
+namespace pcnetd{
+  void init();
+  int sendPacket(void *packet, size_t len, uint8_t *dest);
+  void polling();
+  void sendData(void* buf, unsigned short len, unsigned short protocol);
+};
 extern "C"{
   void setcr3(unsigned long long*);
   unsigned long long* getcr3();

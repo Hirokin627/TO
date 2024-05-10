@@ -75,20 +75,24 @@ class logform{
       btn->l->owner=(unsigned long long)this;
     }
 };
+void logout(button* btn){
+  delete btn;
+  new logform;
+}
 void login(logform* form){
-  cns->puts("login proccess start(username=%s)\n", nowt->chrs);
   struct fat_ent* fe=drvd::drvs[bdl]->files->findfile((const char*)nowt->chrs);
   if(fe){
     struct profile* pf=new struct profile;
     drvd::drvs[bdl]->files->loadfile(fe, (unsigned char*)pf);
     if(!strncmp((const char*)pf->sig, "USER", 4)){
       asm("cli");
-      delete form->w;
-      delete form->tbx;
-      cns->puts("this is user file!\n");
       strcpy(cuser, (const char*)nowt->chrs);
       unsigned int bc=pf->bc;
       graphic::drawbox(layerd::bl, bc, 0, 0, scrxsize-1, scrysize-29);
+      delete form->w;
+      delete form->tbx;
+      delete form->btn;
+      delete form;
       termlock=0;
       //delete form->w->cs;
       //delete form->tbx->l;
@@ -150,6 +154,7 @@ extern "C" void nKernelmain(struct arg* ai){
   cns=new console(60, (scrysize)/16);
   pci::init();
   pic_init();
+  pcnetd::init();
   asm("cli");
   rtcd::init();
   drvd::init(bdpp);
@@ -318,7 +323,7 @@ extern "C" void nKernelmain(struct arg* ai){
           }
         }else{
           if(k==1){
-            window* nw=new window(200, 200);
+            pcnetd::polling();
           }else if(k==2){
             task* nt=new task((unsigned long long)testt);
             nt->run();

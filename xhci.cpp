@@ -425,8 +425,10 @@ namespace xhci{
   }
   void posthandle(){
   asm("cli");
+  unsigned char test=0;
   struct TRB* erdp=(struct TRB*)(rr->ir[0].erdp&~0xf);
   while(erdp->c==c){
+    test=1;
     struct TRB t=*erdp;
     erdp++;
     eri++;
@@ -494,6 +496,9 @@ namespace xhci{
         }
       }
     }
+    unsigned int is=pci::readpcidata(xhc, 0x3c);
+    is&=~0xffff;
+    is|=0x020b;
     open_irq(11);
     //cns->puts("XHCI found\n");
     msip=false;

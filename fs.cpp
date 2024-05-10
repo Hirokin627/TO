@@ -210,7 +210,6 @@ struct fat_ent* fat::getnext(struct fat_ent* e, int dir){
 void fat::loadfile(struct fat_ent* f, unsigned char* b){
   unsigned int bpc=bpb->sectors_per_cluster*bpb->bytes_per_sector;
   unsigned int clus=f->getclus();
-  cns->puts("clus=%d lba=%x\n", f->getclus(), calcblock(clus));
   if(f->getclus()==0)return;
   preparecluschain(clus);
   unsigned int size=f->filesize;
