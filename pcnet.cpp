@@ -195,19 +195,19 @@ void initDE(uint8_t *des, int idx, int is_tx)
       //sendData(na, 28, 0x806);
     }else if(arp->operation==2){
       cns->puts("abc %08x\n", *(unsigned int*)((unsigned long long)pbuf+14));
-      for(int i=0;i<6;i++)cns->puts("%02x ", *(unsigned char*)((unsigned long long)pbuf+8+i));
+      //for(int i=0;i<6;i++)cns->puts("%02x ", *(unsigned char*)((unsigned long long)pbuf+8+i));
       cns->nline();
     }
   }
   int pcnt=0;
   void handlepacket(void* pbuf, unsigned short plen){
     unsigned char* buf=(unsigned char*)pbuf;
-    cns->puts("from: ");
-    for(int i=0;i<6;i++)cns->puts("%02x ", buf[i+6]);
+    //cns->puts("from: ");
+    //for(int i=0;i<6;i++)cns->puts("%02x ", buf[i+6]);
     for(int i=0;i<6;i++){
       amac[i]=buf[i+6];
     }
-    cns->nline();
+    //cns->nline();
     ipd::convertbig(&buf[12], 2);
     unsigned short type=*(unsigned short*)&buf[12];
     //cns->puts("Ether type: %04x\n", type);
@@ -353,4 +353,4 @@ void initDE(uint8_t *des, int idx, int is_tx)
     cns->puts("!\n");
   }
 }
-unsigned int lip=0;
+unsigned int lip=0x7b00a8c0;

@@ -46,7 +46,7 @@ namespace ipd{
   void recieve(void* buf, unsigned short len){
     struct IPPacket* ip=(struct IPPacket*)buf;
     //cns->puts("---------IP-----------\n");
-    //cns->puts("to ip:%04x\n", conve(*(unsigned int*)ip->dip, 4));
+    cns->puts("to ip:%04x from: %04x\n", conve(*(unsigned int*)ip->dip, 4), conve(*(unsigned int*)ip->dip, 4));
     convertbig(&ip->totall, 2);
     convertbig(&ip->headercheck, 2);
     convertbig(&ip->fragment, 2);

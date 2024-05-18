@@ -556,6 +556,24 @@ extern unsigned int lip;
     unsigned short len;
     unsigned short checksum;
   }__attribute__((packed));
+  struct NBTHEAD{
+    unsigned short id;
+    unsigned char nmf1:3;
+    unsigned char opcode:5;
+    unsigned char rcode:4;
+    unsigned char nmf0:4;
+    unsigned short qdcount;
+    unsigned short ancount;
+    unsigned short nscount;
+    unsigned short arcount;
+    int nmf(){
+      return (nmf1<<4)|nmf1;
+    }
+    void setnmf(unsigned char nmf){
+      nmf1=(nmf>>4)&0x7;
+      nmf0=nmf&0xf;
+    }
+  }__attribute__((packed));
 namespace pcnetd{
   void init();
   int sendPacket(void *packet, size_t len, uint8_t *dest);
@@ -584,3 +602,5 @@ extern "C"{
   void setr10withhlt(unsigned long long data);
   void writemsr(unsigned int id, unsigned int data);
 };
+char* checkname(char* name, unsigned int* len);
+void nbtprocess(unsigned char* data, unsigned int len);
