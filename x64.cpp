@@ -15,6 +15,12 @@ struct iframe{
 }__attribute__((packed));
 __attribute__((interrupt)) void GPhandle(iframe* f, unsigned long long ec){
   for(int i=0;i<scrxsize*scrysize;i++)vram[i]=0x237dff;
+  svgad::putfifo(1);
+  svgad::putfifo(0);
+  svgad::putfifo(0);
+  svgad::putfifo(scrxsize);
+  svgad::putfifo(scrysize);
+  svgad::writereg(21, 1);
   *(unsigned long long*)12=f->rip;
   setr10withhlt(f->rip);
   asm("cli\nhlt");

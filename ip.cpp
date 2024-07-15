@@ -46,14 +46,14 @@ namespace ipd{
   void recieve(void* buf, unsigned short len){
     struct IPPacket* ip=(struct IPPacket*)buf;
     //cns->puts("---------IP-----------\n");
-    cns->puts("to ip:%04x from: %04x\n", conve(*(unsigned int*)ip->dip, 4), conve(*(unsigned int*)ip->dip, 4));
+    //cns->puts("to ip:%04x from: %04x\n", conve(*(unsigned int*)ip->dip, 4), conve(*(unsigned int*)ip->sip, 4));
     convertbig(&ip->totall, 2);
     convertbig(&ip->headercheck, 2);
     convertbig(&ip->fragment, 2);
     unsigned int dataoff=ip->hlen*4;
-    switch(ip->protocol){
+    switch(ip->protocol){ 
       case 17:
-        udpd::recieve((void*)((unsigned long long)buf+dataoff-8), len-dataoff+8);
+        udpd::recieve((void*)((unsigned long long)buf+dataoff-8), len-dataoff+8, conve(*(unsigned int*)ip->sip, 4));
         break;
     }
   }

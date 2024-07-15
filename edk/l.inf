@@ -17,5 +17,7 @@
 	gEfiBlockIoProtocolGuid
 	gEfiLoadedImageProtocolGuid
 	gEfiSimpleFileSystemProtocolGuid
+	gEfiEdidOverrideProtocolGuid
+	gEfiEdidDiscoveredProtocolGuid
 [Guids]
 	gEfiAcpiTableGuid

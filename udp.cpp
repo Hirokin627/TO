@@ -1,7 +1,7 @@
 #include "kernel.h"
 namespace udpd{
-  void recieve(void* pbuf, unsigned short len){
-    unsigned long long fip=*(unsigned long long*)pbuf;
+  void recieve(void* pbuf, unsigned short len, unsigned int fip){
+    //unsigned long long fip=*(unsigned long long*)pbuf;
     //pbuf=(void*)((unsigned long long)pbuf+8);
     
     //len-=8;
@@ -11,7 +11,7 @@ namespace udpd{
     ipd::convertbig(&up->top, 2);
     ipd::convertbig(&up->len, 2);
     ipd::convertbig(&up->checksum, 2);
-    cns->puts("from port=%d to port=%d\n", up->fromp, up->top);
+    //cns->puts("from port=%d to port=%d\n", up->fromp, up->top);
     unsigned char* data=(unsigned char*)((unsigned long long)up+sizeof(struct UDPPacket));
     for(int i=0;i<(len-8)/4;i++){
       //if(up->fromp==67||up->fromp==68){
@@ -24,14 +24,14 @@ namespace udpd{
         unsigned int l=0;
     switch(up->top){ 
       case 137:
-        nbtprocess(data, len-8);
+        nbtprocess(data, len-8, fip);
         break;
       default:
         break;
     }
-    cns->nline();
-    cns->puts("str: %s\n", data);
-    cns->nline();
+    //cns->nline();
+    //cns->puts("str: %s\n", data);
+    //cns->nline();
   }
   void send(void* pbuf, unsigned short len, unsigned int tip, unsigned short fport, unsigned short tport){ 
     unsigned char* up=(unsigned char*)searchmem(len+8);

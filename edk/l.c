@@ -5,6 +5,7 @@
 #include <Library/BaseMemoryLib.h>
 #include <Protocol/BlockIo.h>
 #include <Protocol/LoadedImage.h>
+#include <Protocol/EdidDiscovered.h>
 #include <Protocol/SimpleFileSystem.h>
 #include "bootpack.h"
 #include "elf.hpp"
@@ -23,18 +24,20 @@ EFI_GRAPHICS_OUTPUT_PROTOCOL* gop=(EFI_GRAPHICS_OUTPUT_PROTOCOL*)0;
 EFI_LOADED_IMAGE_PROTOCOL* lip;
 EFI_SIMPLE_FILE_SYSTEM_PROTOCOL* sfsp;
 EFI_BLOCK_IO_PROTOCOL* bip;
+EFI_EDID_DISCOVERED_PROTOCOL* edp;
 EFI_FILE_PROTOCOL *root, *file;
 EFI_STATUS EFIAPI UefiMain(EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST){
 	gBS->OpenProtocol(IH, &gEfiLoadedImageProtocolGuid, (void**)&lip, IH, NULL, EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL);
 	gBS->OpenProtocol(lip->DeviceHandle, &gEfiBlockIoProtocolGuid, (void**)&bip, IH, NULL, EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL);
 	gBS->LocateProtocol(&gEfiGraphicsOutputProtocolGuid, NULL, (void**)&gop);
+	gBS->LocateProtocol(&gEfiEdidOverrideProtocolGuid, NULL, (void**)&edp);
 	gBS->OpenProtocol(lip->DeviceHandle, &gEfiSimpleFileSystemProtocolGuid, (void**)&sfsp, IH, NULL, EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL);
 	EFI_DEVICE_PATH_PROTOCOL* test;
 	gBS->OpenProtocol(lip->DeviceHandle, &gEfiDevicePathProtocolGuid, (void**)&test, IH, NULL, EFI_OPEN_PROTOCOL_GET_PROTOCOL);
 	//test=lip->FilePath;
 	sfsp->OpenVolume(sfsp, &root);
 	EFI_STATUS e=root->Open(root, &file, L"haribote.sys", EFI_FILE_MODE_READ, 0);
-	if(EFI_ERROR(e))Print(L"Error: Kernel load %r", e);
+	if(EFI_ERROR(e)||(edp==NULL))Print(L"Error: Kernel load %r", e);
 	UINTN fs=1024*1024;
 	VOID* tk;
 	gBS->AllocatePool(EfiLoaderData, 1024*1024, &tk);
@@ -104,6 +107,12 @@ EFI_STATUS EFIAPI UefiMain(EFI_HANDLE IH, EFI_SYSTEM_TABLE* ST){
 	  test=(EFI_DEVICE_PATH_PROTOCOL*)((unsigned long long)test+*(unsigned short*)test->Length);
 	}
 	Print(L"base %p ptr=%p\n", gRT, &gRT->ResetSystem);
+	for(int i=0;i<gop->Mode->MaxMode;i++){
+	  EFI_GRAPHICS_OUTPUT_MODE_INFORMATION* a;
+	  UINTN size;
+	  gop->QueryMode(gop, i, &size, &a); 
+	  Print(L"Mode %d x=%d y=%d bpp=%d\n", i, a->HorizontalResolution, a->VerticalResolution, a->PixelFormat);
+	}
 	gBS->GetMemoryMap(&bsize, (EFI_MEMORY_DESCRIPTOR*)mems, &key, &dsize, &dv);
 	//Print(L"memory desc addr:%0lx\nMemory desc size: %0lx\nBuffe rsize=%0lx", (UINT64)mems, (UINTN)dsize, (UINTN)bsize);
 	gBS->ExitBootServices(IH, key);

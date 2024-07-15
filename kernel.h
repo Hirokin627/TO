@@ -443,12 +443,14 @@ unsigned long long* makep4();
 void closef(file* f);
 dirent* opendir(const char* name);
 void breakp4(unsigned long long* ap4);
+unsigned long long searchmemforio(size_t size);
 void closedir(dirent*);
 void createf(const char* name);
 void api_init();
 void open_irq(char irq);
 namespace layerd{
   void init();
+  void resetsb();
   void refreshsub(int x0, int y0, int x1, int y1);
   void trefreshsub(int x0, int y0, int x1, int y1);
   extern int top;
@@ -514,7 +516,7 @@ namespace rtcd{
   extern unsigned short y,m,d,h,mt,s;
 };
 namespace udpd{
-  void recieve(void* pbuf, unsigned short len);
+  void recieve(void* pbuf, unsigned short len, unsigned int fip);
   void send(void* pbuf, unsigned short len, unsigned int tip, unsigned short fport, unsigned short tport);
 };
 
@@ -574,11 +576,23 @@ extern unsigned int lip;
       nmf0=nmf&0xf;
     }
   }__attribute__((packed));
+  struct RRcrd{
+    unsigned short type;
+    unsigned short clas;
+    unsigned int ttl;
+    unsigned short len;
+  }__attribute__((packed));
 namespace pcnetd{
   void init();
   int sendPacket(void *packet, size_t len, uint8_t *dest);
   void polling();
   void sendData(void* buf, unsigned short len, unsigned short protocol);
+};
+namespace svgad{
+  void writereg(unsigned int ind, unsigned int data);
+  unsigned int readreg(unsigned int ind);
+  void putfifo(unsigned int d);
+  void init();
 };
 extern "C"{
   void setcr3(unsigned long long*);
@@ -603,4 +617,4 @@ extern "C"{
   void writemsr(unsigned int id, unsigned int data);
 };
 char* checkname(char* name, unsigned int* len);
-void nbtprocess(unsigned char* data, unsigned int len);
+void nbtprocess(unsigned char* data, unsigned int len, unsigned int fip);

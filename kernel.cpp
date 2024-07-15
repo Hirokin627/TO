@@ -48,13 +48,28 @@ unsigned char bdl=0;
 EFI_DEVICE_PATH_PROTOCOL* bdpp=(EFI_DEVICE_PATH_PROTOCOL*)dp;
 task* ta;
 void setvgaregister(unsigned short port, unsigned char index, unsigned char d){
-  io_out8(port, index);
-  if(port==0x3c0)io_out8(port+1, d);
-  else io_out8(port+1, d);
+  if(port==0x3c0){
+    io_in8(0x3da);
+    io_out8(0x3c0, index);
+    io_out8(0x3c0, d);
+    io_in8(0x3da);
+    io_out8(0x3c0, 0x20);
+  }else{
+    io_out8(port, (d<<8)|index);
+  }
 }
 unsigned char readvgaregister(unsigned short port, unsigned char index){  
-  io_out8(port, index);
-  return io_in8(port+1);
+  if(port==0x3c0){
+    io_in8(0x3da);
+    io_out8(port, index);
+    unsigned char d=io_in8(0x3c1);
+    io_in8(0x3da);
+    io_out8(0x3c0, 0x20);
+    return d;
+  }else{
+    io_out8(port, index);
+    return io_in8(port+1);
+  }
 }
 class logform;
 void login(logform* form);
@@ -100,11 +115,58 @@ void login(logform* form){
     }
   }
 }
+void changescr(){
+  
+  io_out16(0x1ce, 4);
+  io_out16(0x1cf, 0);
+  io_out16(0x1ce, 3);
+  io_out16(0x1cf, 8);
+  io_out16(0x1ce, 1);
+  io_out16(0x1cf, 320);
+  io_out16(0x1ce, 2);
+  io_out16(0x1cf, 200);
+  setvgaregister(0x3c4, 0, 2);
+  io_in8(0x3da);
+  io_out16(0x3c4, 0x100);
+  io_out8(0x3c2, 0xe3);
+  io_out8(0x3c3, 0x01);
+  unsigned int port=io_in8(0x3cc)&1 ? 0x3d4 : 0x3b4;
+  setvgaregister(0x3c0, 0x10, 0x41);
+  setvgaregister(0x3c0, 0x11, 0x00);
+  setvgaregister(0x3c0, 0x12, 0x0f);
+  setvgaregister(0x3c0, 0x13, 0x00);
+  setvgaregister(0x3c0, 0x14, 0x00);
+  io_out8(0x3c2, 0x63);
+  setvgaregister(0x3c4, 0x01, 0x01);
+  setvgaregister(0x3c4, 0x03, 0x00);
+  setvgaregister(0x3c4, 0x04, 0x0e);
+  setvgaregister(0x3ce, 0x05, 0x40);
+  setvgaregister(0x3ce, 0x06, 0x05);
+  setvgaregister(port, 0x00, 0x5f);
+  setvgaregister(port, 0x01, 0x4f);
+  setvgaregister(0x3d4, 0x02, 0x50);
+  setvgaregister(0x3d4, 0x03, 0x82);
+  setvgaregister(0x3d4, 0x04, 0x54);
+  setvgaregister(0x3d4, 0x05, 0x80);
+  setvgaregister(0x3d4, 0x06, 0xbf);
+  setvgaregister(0x3d4, 0x07, 0x1f);
+  setvgaregister(0x3d4, 0x08, 0x00);
+  setvgaregister(0x3d4, 0x09, 0x41);
+  setvgaregister(0x3d4, 0x10, 0x9c);
+  setvgaregister(0x3d4, 0x11, 0x8e);
+  setvgaregister(0x3d4, 0x12, 0x8f);
+  setvgaregister(0x3d4, 0x13, 0x28);
+  setvgaregister(0x3d4, 0x14, 0x40);
+  setvgaregister(0x3d4, 0x15, 0x96);
+  setvgaregister(0x3d4, 0x16, 0xb9);
+  setvgaregister(0x3d4, 0x17, 0xa3);
+  
+  //vram=(int*)0xa0000;
+}
 extern "C" void nKernelmain(struct arg* ai){
   cli();
   asm("cli");
-  /*io_in8(0x3ca);
-  setvgaregister(0x3d4, 0x11, readvgaregister(0x3d4, 0x11)&~0x7f);
+  /*setvgaregister(0x3d4, 0x11, readvgaregister(0x3d4, 0x11)&~0x7f);
   setvgaregister(0x3c4, 0x04, 0x00);
   setvgaregister(0x3c0, 0x10, 0x0c);
   setvgaregister(0x3c0, 0x11, 0x00);
@@ -134,8 +196,32 @@ extern "C" void nKernelmain(struct arg* ai){
   setvgaregister(0x3d4, 0x14, 0x1f);
   setvgaregister(0x3d4, 0x15, 0x96);
   setvgaregister(0x3d4, 0x16, 0xb9);
-  setvgaregister(0x3d4, 0x17, 0xa3);
-  setvgaregister(0x3c4, 0x04, 0x04);*/
+  setvgaregister(0x3d4, 0x17, 0xa3);*/
+  
+  
+  /*io_out16(0x3c4, 0x100);
+  io_out8(0x3c2, 0xe3);
+  io_out8(0x3c3, 1);
+  unsigned char sd[]={ 0x01, 0x0f, 0x00, 0x06 };
+  for(int i=0;i<4;i++){
+    setvgaregister(0x3c4, i+1, sd[i]);
+  }
+  setvgaregister(0x3c4, 0, 3);
+  setvgaregister(0x3d4, 0x11, 0x20);
+  unsigned char cd[]={ 0x5f, 0x4f, 0x50, 0x82, 0x54, 0x80, 0x0b, 0x3e, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xea, 0x8c, 0xdf, 0x28, 0x00, 0xe7, 0x04, 0xe3, 0xff};
+  for(int i=0;i<=0x18;i++){
+    setvgaregister(0x3d4, i, cd[i]);
+  }
+  unsigned char vd[]={ 0x00, 0x0f, 0x00, 0x00, 0x00, 0x03, 0x05, 0x00, 0xff};
+  for(int i=0;i<=8;i++){
+    setvgaregister(0x3ce, i, vd[i]);
+  }
+  unsigned char ad[]={0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x01, 0x00, 0x0f, 0x00, 0x00};
+  for(int i=0;i<=0x14;i++)
+    setvgaregister(0x3c0, i, ad[i]);
+  io_out8(0x3c6, 0xff);*/
+  //io_out16(0x1ce, 4);
+  //io_out16(0x1cf, 1);
   vram=ai->Frame.fb;
   scrxsize=ai->Frame.xsize;
   scrysize=ai->Frame.ysize;
@@ -150,17 +236,20 @@ extern "C" void nKernelmain(struct arg* ai){
   x64_init();
   api_init();
   kernelbuf=new fifo(128);
+  pci::init();
+  svgad::init();
   layerd::init();
   cns=new console(60, (scrysize)/16);
-  pci::init();
+  cns->l->updown(0);
   pic_init();
-  pcnetd::init();
+  //pcnetd::init();
   asm("cli");
   rtcd::init();
   drvd::init(bdpp);
   ided::init();
   satad::init();
   ps2::init();
+  fsd::init();
   taskb.cr3=(unsigned long long)getcr3();
   taskb.rip=(unsigned long long)testt;
   taskb.cs=8;
@@ -171,6 +260,7 @@ extern "C" void nKernelmain(struct arg* ai){
   //cns->l->updown(-1);
   timerd::init();
   ta=mtaskd::init();
+  cns->puts("Port=%x\n", io_in8(0x3cc)&1 ? 0x3b4 : 0x3d4);
   console* dc=new console(80/8+1, 3);
   layer* yd=dc->l;
   dc->puts("0000/00/00\n00::00");
@@ -215,7 +305,7 @@ extern "C" void nKernelmain(struct arg* ai){
   }
   //graphic::drawbox(l, 0xffffff, 0, 0, 15, 15);
   l->updown(layerd::top+1);
-  fsd::init();
+  xhci::init();
   //window* test=new window(200, 200);
   window* mw;
   int mpx,mpy;
@@ -226,15 +316,19 @@ extern "C" void nKernelmain(struct arg* ai){
   btn->l->oncrick=(event*)acpi::shutdown;
   btn->l->slide(3, scrysize-24+2);
   logform* lf=new logform;
-  xhci::init();
+  if(drvd::drvs['A']==0){
+    asm("cli");
+    window* wabc=new window(200, 200);
+    graphic::putfontstr(wabc->cs, 0, 16, 0x00000, "Where am I?\n(could not\nrecognize\nboot disk");
+  }
   unsigned char bk[256];
   unsigned char fo=0;
   while(1){
     asm("cli");
     if(kernelbuf->len==0){
-      if(fo==0)
+      if(fo==0){
         asm("sti\nhlt");
-      else{
+      }else{
         fo=0;
         mtaskd::taskswitch();
       }
@@ -304,7 +398,9 @@ extern "C" void nKernelmain(struct arg* ai){
         if(my>scrysize-1)my=scrysize-1;
         l->slide(mx, my);
       }else if(q==1){
+        asm("sti");
         xhci::posthandle();
+        pcnetd::polling();
         //asm("sti");
       }else if(q==2){
         unsigned char k=kernelbuf->read();

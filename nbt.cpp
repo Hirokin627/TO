@@ -1,13 +1,14 @@
 #include "kernel.h"
-void nbtprocess(unsigned char* data, unsigned int len){
+void nbtprocess(unsigned char* data, unsigned int len, unsigned int fip){
   struct NBTHEAD* nh=(struct NBTHEAD*)data;
-  cns->puts("qcode=%x\n", nh->opcode);
-  cns->puts("nmf=%x\n", nh->nmf());
+  //cns->puts("qcode=%x\n", nh->opcode);
+  //cns->puts("nmf=%x\n", nh->nmf());
   if((nh->opcode==0)&&((nh->nmf()&~1)==0x10)){ 
-    cns->puts("NAME REQUEST\n");
+    //cns->puts("NAME REQUEST\n");
     struct NBTHEAD* rh=(struct NBTHEAD*)searchmem(100);
     unsigned char* nstr=(unsigned char*)((unsigned long long)rh+sizeof(struct NBTHEAD));
     strcpy((char*)nstr, (const char*)((unsigned long long)data+sizeof(struct NBTHEAD)));
+    nstr+=strlen((const char*)nstr)+1;
     rh->id=nh->id;
     rh->opcode=1<<4;
     rh->setnmf(0b1011000);
@@ -31,6 +32,7 @@ char* calcname(const char* name){
     n[i+1]=((unsigned char)name[i/2]>>4)+0x41;
     n[i+2]=(name[i/2]&0xf)+0x41;
   }
+  n[len-1]=0;
   n[0]=len;
   return n;
 }

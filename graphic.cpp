@@ -18,8 +18,14 @@ namespace graphic{
     if(nf)l->refreshconfro(bx, by, bx+8, by+16);
   }
   void putfontstr(layer* l, int c, int bx, int by, const char* str, bool nf){
+    int obx=bx;
     for(int i=0;str[i]!=0;i++,bx+=8){
-      putfont(l, c, bx, by, str[i]);
+      if(str[i]!='\n')
+        putfont(l, c, bx, by, str[i]);
+      else{
+        by+=16;
+        bx=obx;
+      }
     }
   }
 };

@@ -347,8 +347,8 @@ void initDE(uint8_t *des, int idx, int is_tx)
       /*0xff, 0xff, 0xff, 0xff, 0xff, 0xff, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], 0x08, 0x06, */0x00, 0x01, 0x08, 0x00, 6, 4, 0, 1, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5], 192, 168, 225, 2, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 192, 168, 225, 1//, 0x36, 0x11, 0xe9, 0xb6
     };
     make_crc32_table();
-    sendData(data, 28, 0x806);
-    while(1)polling();
+    //sendData(data, 28, 0x806);
+    //while(1)polling();
     //sendPacket(data, 48, 0);
     cns->puts("!\n");
   }

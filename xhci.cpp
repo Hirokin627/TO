@@ -478,6 +478,7 @@ namespace xhci{
       if(pci::readpcidata(pci::pcis[i], 8)>>8==0x0c0330){
         xhc=pci::pcis[i];
         xhcp=true;
+        pci::writepcidata(xhc, 4, pci::readpcidata(xhc, 4)|3);
         //pause();
           unsigned int sp=pci::readpcidata(xhc, 0xdc);
           pci::writepcidata(xhc, 0xd8, sp);

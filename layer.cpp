@@ -4,6 +4,32 @@ namespace layerd{
   int top=-1;
   int* sb;
   layer* bl;
+  void resetsb(){
+    asm("cli");
+    bl=new layer(scrxsize,scrysize);
+    bl->col_inv=-1;
+    bl->updown(0);
+    /*for(int i=0;i<scrxsize*scrysize;i++){
+      bl->buf[i]=((255*i/scrxsize/scrysize)*0x10001)<<0;
+      bl->buf[i]|=((255-(255*i/scrxsize/scrysize))*0x101)<<0;
+    }*/
+    graphic::drawbox(bl, 0x008484, 0, 0, scrxsize-1, scrysize-29);
+    graphic::drawbox(bl, 0xc6c6c6, 0, scrysize-28, scrxsize-1, scrysize-28);
+    graphic::drawbox(bl, 0xffffff, 0, scrysize-27, scrxsize-1, scrysize-27);
+    graphic::drawbox(bl, 0xc6c6c6, 0, scrysize-26, scrxsize-1, scrysize-1);
+    
+    /*graphic::drawbox(bl, 0xffffff, 3, scrysize-24, 59, scrysize-24);
+    graphic::drawbox(bl, 0xffffff, 2, scrysize-24, 2, scrysize-4);
+    graphic::drawbox(bl, 0x848484, 3, scrysize-4, 59, scrysize-4);
+    graphic::drawbox(bl, 0x848484, 59, scrysize-23, 59, scrysize-5);
+    graphic::drawbox(bl, 0x000000, 2, scrysize-3, 59, scrysize-3);
+    graphic::drawbox(bl, 0x000000, 60, scrysize-24, 60, scrysize-3);*/
+    
+    graphic::drawbox(bl, 0x848484, scrxsize-47, scrysize-24, scrxsize-4, scrysize-24);
+    graphic::drawbox(bl, 0x848484, scrxsize-47,scrysize-23, scrxsize-47, scrysize-4);
+    graphic::drawbox(bl, 0xffffff, scrxsize-47, scrysize-3, scrxsize-4, scrysize-3);
+    graphic::drawbox(bl, 0xffffff, scrxsize-3, scrysize-24, scrxsize-3, scrysize-3);
+  }
   void init(){
     layers=(layer**)searchmem(sizeof(layer)*256);
     sb=(int*)searchmem(4*scrxsize*scrysize);
@@ -33,6 +59,10 @@ namespace layerd{
   }
   unsigned int mixc(unsigned int bc, unsigned int fc, unsigned char i){
   }
+  unsigned int mono(unsigned int c){
+    unsigned short r=(c>>16)&0xff,g=(c>>8)&0xff,b=c&0xff;
+    return ((r+g+b)/3)*0x010101;
+  }
   void trefreshsub(int x0, int y0, int x1, int y1){
     if(x0<0)x0=0;
     if(y0<0)y0=0;
@@ -61,6 +91,15 @@ namespace layerd{
         vram[y*scrxsize+x]=sb[y*scrxsize+x];
       }
     }
+    asm("cli");
+    svgad::putfifo(1);
+    svgad::putfifo(x0);
+    svgad::putfifo(y0);
+    svgad::putfifo(x1-x0+1);
+    svgad::putfifo(y1-y0+1);
+    svgad::writereg(21, 1);
+    
+    /**/
   }
   void refreshsub(int x0, int y0, int x1, int y1){
     //trefreshsub(x0, y0, x1, y1);
