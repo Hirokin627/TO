@@ -291,7 +291,7 @@ namespace xhci{
       resetport(port);
     }*/
     if(trb->code!=1&&trb->code!=13){
-      cns->puts("TRB Error detect:%d\n", trb->code);
+      cns->puts("TRB Error detect:%d\nepstate=%d\n", trb->code, dcbaa[slot]->epcont[0].epstate);
     }
     if(slots[slot].phase==getcdesc){
       if(trb->code==1||trb->code==13){
@@ -322,6 +322,7 @@ namespace xhci{
               drivers[slot][in]=new hid();
               drivers[slot][in]->initialized=0;
               drivers[slot][in]->id=*i;
+              drivers[slot][in]->in=i->binterfacenumber;
               drivers[slot][in]->fulld=(unsigned char*)i;
               slots[slot].ip++;
               supported=true;
@@ -337,12 +338,15 @@ namespace xhci{
               }else{
                 //cns->puts("using report protocol\n");
                 slots[slot].type=USBRdevice;
+                
               }
             }else if(i->binterfaceclass==8){
               drivers[slot][in]=new mass;
               drivers[slot][in]->id=*i;
               drivers[slot][in]->fulld=(unsigned char*)i;
               supported=true;
+            }else if(i->binterfaceclass==9){
+              cns->puts("USB Hub detected port=%d\n", slots[slot].port);
             }else{
               drivers[slot][in]=new classd;
               drivers[slot][in]->id=*i;
@@ -350,6 +354,7 @@ namespace xhci{
             drivers[slot][in]->reset=0;
             drivers[slot][in]->fulld=p;
           }else if(p[1]==5){
+            //cns->puts("decoding endpoint descriptor...\n");
             struct endpointdescriptor* e=(struct endpointdescriptor*)p;
             unsigned char dci=(e->bendpointaddress&15)*2;
             dci+=(e->bendpointaddress>>7)&1;
@@ -358,6 +363,11 @@ namespace xhci{
             epcont->eptype=e->bmattributes&3;
             epcont->maxpacketsize=e->wmaxpacketsize;
             epcont->eptype+=((e->bendpointaddress>>7)&1)*4;
+            if(!(e->bendpointaddress>>7)){
+              //cns->puts("There is an output endpoint!: %d\n", dci);
+            }else{
+              //cns->puts("There is an input endpoint!: %d\n", dci);
+            }
             tr[slot][dci]=new CR;
             epcont->trdp=(unsigned long long)tr[slot][dci]->ring|1;
             epcont->cerr=3;
@@ -441,6 +451,7 @@ namespace xhci{
     asm("cli");
     switch(t.type){
       case 34:
+        //cns->puts("port changed\n");
         recievetrb((struct psctrb*)&t);
         //asm("sti");
         break;
@@ -507,11 +518,11 @@ namespace xhci{
     unsigned char p=pci::readpcidata(xhc, 0x34)&0xff;
     while(p){
       unsigned char t=pci::readpcidata(xhc, p)&0xff;
+      cns->puts("type=%d\n", t);
       if(t==5){
         msip=true;
         break;
       }
-      //cns->puts("type=%d\n", t);
       p=(pci::readpcidata(xhc, p)>>8)&0xff;
     }
     eri=0;
@@ -532,6 +543,7 @@ namespace xhci{
       mr.reg.data=0xc02b;
       for(int i=0;i<4;i++)pci::writepcidata(xhc, p+i*4, mr.data[i]);
     }else{
+      cns->puts("0x3c=%0lx\n", pci::readpcidata(xhc, 0x3c));
     }
     //cns->puts("using irq=%x\n", pci::readpcidata(xhc, 0x3c));
         //pause();
@@ -614,6 +626,10 @@ namespace xhci{
     rr->ir[0].erstba=(unsigned long long)erst;
     *(unsigned int *)&rr->ir[0].interval=4000; 
     *(unsigned int*)&rr->ir[0]|=3;
+    io_out8(0x20, 0x62);
+    io_out8(0xa0, 0x63);
+    asm("sti");
+    *(unsigned int*)&rr->ir[0]|=1;
     ope->usbcmd|=4;
     ope->usbcmd|=1;
     while(ope->usbsts&1);
@@ -624,12 +640,9 @@ namespace xhci{
         resetport(i);
       }
     }
-    io_out8(0x20, 0x62);
-    io_out8(0xa0, 0x63);
-    *(unsigned int*)&rr->ir[0]|=1;
     //cns->puts("USBSTS=%08x\n", ope->usbsts);
     //io_out8(0x64, 0xfe);
-    asm("int $0x2b");
+    //asm("int $0x2b");
   }
 unsigned char calcepaddr(unsigned char a){
   return (a&3)*2+(a>>7);

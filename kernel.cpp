@@ -237,10 +237,10 @@ extern "C" void nKernelmain(struct arg* ai){
   api_init();
   kernelbuf=new fifo(128);
   pci::init();
-  svgad::init();
+  //svgad::init();
   layerd::init();
   cns=new console(60, (scrysize)/16);
-  cns->l->updown(0);
+  //cns->l->updown(0);
   pic_init();
   //pcnetd::init();
   asm("cli");
@@ -322,7 +322,9 @@ extern "C" void nKernelmain(struct arg* ai){
     graphic::putfontstr(wabc->cs, 0, 16, 0x00000, "Where am I?\n(could not\nrecognize\nboot disk");
   }
   unsigned char bk[256];
+  for(int i=0;i<256;i++)bk[i]=0;
   unsigned char fo=0;
+  unsigned char led=0;
   while(1){
     asm("cli");
     if(kernelbuf->len==0){
@@ -421,8 +423,8 @@ extern "C" void nKernelmain(struct arg* ai){
           if(k==1){
             pcnetd::polling();
           }else if(k==2){
-            task* nt=new task((unsigned long long)testt);
-            nt->run();
+            /*task* nt=new task((unsigned long long)testt);
+            nt->run();*/
           }else if(k==0x1c){
             //io_out8(0x64, 0xfe);
             typedef enum{
@@ -482,17 +484,19 @@ extern "C" void nKernelmain(struct arg* ai){
           }
         }
       }else if(q==5){
-        unsigned long long p=kernelbuf->read();
+        unsigned long long bsize=kernelbuf->read();
+        //unsigned long long p=kernelbuf->read();
         asm("sti");
-        unsigned char* k=(unsigned char*)p;
+        //unsigned char* k=(unsigned char*)p;
         unsigned char pk[256];
         unsigned char nk[256];
         for(int i=0;i<256;i++){
           pk[i]=0;
           nk[i]=0;
         }
-        for(int i=2;i<8;i++){
-          pk[k[i]]=1;
+        for(int i=2;i<2+bsize;i++){
+          pk[kernelbuf->read()]=1;
+          //cns->puts("detect: %02x\n", kernelbuf->read());
         }
         for(int i=0;i<256;i++){
           nk[i]=(pk[i]==1)&&(bk[i]==0);

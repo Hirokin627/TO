@@ -443,6 +443,7 @@ class classd{
     unsigned char slot;
     unsigned int reportlength;
     int me;
+    unsigned int in;
     int eps[31];
 };
 class hid : public classd{
@@ -454,11 +455,17 @@ class hid : public classd{
     bool isr;
     unsigned char* buf;
     struct normalTRB* nt;
+    bool sendingnt;
+    bool firstt;
     unsigned int xoff,yoff,boff;
     unsigned int xsize,ysize,bsize;
     unsigned int xmax,xmin,ymax,ymin;
-    unsigned int kaoff,kasize;
+    unsigned int kaoff,kasize,atkoff,atksize;
+    unsigned int loff,lsize;
     unsigned char off;
+    unsigned char* test;
+    unsigned char kernel[8];
+    unsigned long long led;
 };
 class mass : public classd{
   public:

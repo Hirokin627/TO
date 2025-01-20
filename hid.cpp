@@ -3,15 +3,6 @@ namespace hidd{
 unsigned char gete(unsigned char* a){
   return *a&0xfc;
 }
-unsigned long long getd(unsigned char* a){
-  unsigned long long bytsize=a[0]&3;
-  unsigned long long v=0;
-  for(int i=0;i<bytsize;i++){
-    unsigned char d=a[1+i];
-    v|=d<<(i*8);
-  }
-  return v;
-}
 unsigned int getdfornt(unsigned char* p, unsigned char bsize){
   bsize+=7;
   bsize/=8;
@@ -20,6 +11,29 @@ unsigned int getdfornt(unsigned char* p, unsigned char bsize){
     v|=p[i]<<(i*8);
   }
   return v;
+}
+unsigned long long getd(unsigned char* a, unsigned int bita, unsigned int bsize){
+  unsigned long long v=0;
+  unsigned char* p=&a[bita/8];
+  //cns->puts("index: %02x\n", bita/8);
+  unsigned int hasuu=bita%8;
+  for(unsigned int i=0,j=0;i<(bsize+7+hasuu-1)/8;i++){
+    //cns->puts("decode: %02x from %02x\n", (p[i]>>hasuu)<<j, p[i]);
+    v|=(p[i]>>hasuu)<<j;
+    j+=8-hasuu;
+    hasuu=0;
+  }
+  //cns->puts("test: %0llx to %0llx\n", (1<<bsize)-1, v);
+  v=v&((1<<bsize)-1);
+  if((v>>(bsize-1))&1){
+    unsigned long long a=~0;
+    a&=~((1<<bsize)-1);
+    v|=a;
+  }
+  return v;
+}
+unsigned long long getd(unsigned char* a){
+  return getdfornt(&a[1], (a[0]&3)*8);
 }
 void plus(unsigned int* bo, unsigned int* bp, unsigned int v){
   *bp+=v;
@@ -35,132 +49,136 @@ void decoderd(hid* d, unsigned char* p, unsigned long long size){
   int cc=0;
   unsigned int bo=0,bp=0;
   unsigned int rs=0;
+  //cns->puts("The first byte of the report descriptor: %02x\n", p[0]);
+  /*for(unsigned int i=0;i<size;i++){
+    for(unsigned int j=0;j<(p[i]&3)+1;j++){
+      cns->puts("%02x ", p[i+j]);
+    }
+    cns->nline();
+    i+=p[i]&3;
+  }*/
+  d->atkoff=0;
+  unsigned char cp=0;
+  unsigned int obo=0;
+  unsigned int lmin,lmax;
+  unsigned int uis[30];
+  unsigned int uip=0;
+  unsigned char rp=0;
+  unsigned char rc=0;
   while(lp>p){
-      if(gete(p)==0xc0){
-        //cns->puts("collec end\n");
-        cc--;
-      }else if(gete(p)==4){
-        //cns->puts("Usage Page(%x)\n", getd(p));
-        unsigned char pg=getd(p);
-        p+=p[0]&3;
-        p++;
-        unsigned int lmin=0,lmax=0;
-        fifo* u=new fifo(128);
-        unsigned int cnt=0;
-        while(gete(p)!=0x80&&gete(p)!=0x90){
-          if(gete(p)==0x14){
-            //cns->puts("log min(%x)\n", getd(p));
-            lmin=getd(p);
-          }else if(gete(p)==0x24){
-            //cns->puts("log max(%x)\n", getd(p));
-            lmax=getd(p);
-          }else if(gete(p)==8){
-            //cns->puts("Usage (%x)\n", getd(p));
-            if(getd(p)==2){
-              //cns->puts("This is MOUSE(TRUE!!!!!!!!)\n");
-              slots[slot].type=USBRMouse;
-              break;
-            }else if(getd(p)==1)break;
-            else if(getd(p)==6){
-              slots[slot].type=USBRKeyboard;
-              break;
-            }else u->write(getd(p));
-          }else if(gete(p)==0x74){
-            //cns->puts("Report size(%x)\n", getd(p));
-            rs=getd(p);
-          }else if(gete(p)==0x94){
-            //cns->puts("Report count(%x)\n", getd(p));
-            cnt=getd(p);
+    unsigned char type=gete(p);
+    //p++;
+    switch(type){
+      case 0x04:
+          cp=getd(p);
+          if(getd(p)==9){
+            uis[uip]=0;
+            uip++;
+            //cns->puts("Button Usage\n");
+          }else if(getd(p)==7){
+            //uis[uip]=0x100;
+            //uip++;
+            uip=0;
           }
-          p+=p[0]&3;
-          p++;
+          //cns->puts("Usage Page: %02x\n", getd(p));
+        break;
+      case 0x84:
+        //cns->puts("report setting to %d\n", getd(p));
+        //if(rc)bo+=8;
+        rc++;
+          bo+=8;
+          /*if(d->xsize)d->xoff+=8;
+          if(d->ysize)d->yoff+=8;
+          if(d->bsize)d->boff+=8;*/
+        rp=getd(p);
+        break;
+      case 0xc0:
+        cp=0;
+        break;
+      case 0x08:
+        uis[uip]=getd(p);
+        uip++;
+        //cns->puts("Usage %x\n", getd(p));
+        break;
+      case 0x14:
+        lmin=getd(p);
+        break;
+      case 0x24:
+        lmax=getd(p);
+        //cns->puts("setting lmax: %x\n", lmax);
+        break;
+      case 0x74:
+        rs=getd(p);
+        //cns->puts("setting rs=%d\n", rs);
+        break;
+      case 0x94:
+        cc=getd(p);
+        //cns->puts("setting c=%d\n", cc);
+        break;
+      case 0x90:
+        if(cp==8){
+          //cns->puts("led page:%dbit %dbits size\n", obo, rs*cc);
+          uip=0;
+          cp=7;
         }
-        //cns->puts("Input or Output\n");
-        int mu=u->len;
-        if(pg==9){
-          d->boff=bo;
-          d->bsize=rs;
-          plus(&bo, &bp, rs*cnt);
-        }else if(pg==1){
-          while(mu){
-            unsigned char ui=u->read();
-            mu--;
-            if(ui==0x30){
-              d->xoff=bo;
-              d->xsize=rs;
-              d->xmax=lmax;
-              d->xmin=lmin;
-              //cns->puts("x addr bit=%d byte=%d\n", bp, bo);
-              //cns->puts("Value attr:%02x\n", getd(p)); 
-              d->off=getd(p)==6;
-            }else if(ui==0x31){
-              d->yoff=bo;
-              d->ysize=rs;
-              d->ymax=lmax;
-              d->xmin=lmin;
-              //cns->puts("y addr bit=%d byte=%d\n", bp, bo);
-            }
-            plus(&bo, &bp, rs);
-          }
-        }else if(pg==12){
-          plus(&bo, &bp, rs*cnt);
-        }else if(pg==7){
-          if(getd(p)==0){
+        obo+=rs*cc;
+        //cns->puts("OUTPUT REPORT\n");
+        break;
+      case 0x80:
+        unsigned char attr=getd(p);
+        if(uip==0){
+          if((cp==7)&&(rs==8)&&(!(attr&1))){
+            //cns->puts("Key array is %dbits on %d\n", rs*cc, bo);
+            d->kasize=rs*cc;
             d->kaoff=bo;
-            d->kasize=cnt;
+          }else if((rs==1)&&(!d->atksize)){
+            d->atkoff=bo;
+            d->atksize=rs*cc;
+            //cns->puts("off size %d %d\n", d->atkoff, d->atksize);
           }
-          //cns->puts("rs=%d cnt=%d\n", rs, cnt);
-          plus(&bo, &bp, rs*cnt);
-        }else{
-          plus(&bo, &bp, rs*cnt);
+          bo+=rs*cc;
+          //cns->puts("plus rs*cc(%d)\n", rs*cc);
         }
-        delete u;
-      }else if(gete(p)==0x94||gete(p)==0x74){
-        int cnt=0;
-        int btsize=rs;
-        //cns->puts("Pedding\n");
-        while(gete(p)!=0x80){
-          if(gete(p)==0x94){
-            cnt=getd(p);
-          }else if(gete(p)==0x74){
-            btsize=getd(p);
+        for(unsigned int i=0;i<uip;i++){
+          unsigned int ui=uis[i];
+          if((ui==0x02)||(ui==0x01)||(ui==238))continue;
+          bool valid=false;
+          //cns->puts("configuring Usage: %x\n", ui);
+          if(ui==0x30){
+            d->xoff=bo;
+            d->xsize=rs;
+            d->xmin=lmin;
+            d->xmax=lmax;
+            if(!(attr&4)){
+              d->off=0;
+              //cns->puts("Offing OFFSET\n");
+            }
+          }else if(ui==0x31){
+            d->yoff=bo;
+            d->ysize=rs;
+            d->ymin=lmin;
+            d->ymax=lmax;
+          }else if(ui==0){
+            d->boff=bo;
+            d->bsize=rs*cc;
+          //cns->puts("plus %d(cc=%d)\n", rs*(cc-1), cc);
+            bo+=rs*(cc-1);
+          }else if(cp==7){
+            bo+=rs*(cc-1);
+          }else if(ui==6){
+            bo+=rs*(cc-1);
+          //cns->puts("plus %d(cc=%d)\n", rs*(cc-1), cc);
           }
-          p+=p[0]&3;
-          p++;
+          bo+=rs;
+          //cns->puts("plus %d\n", rs);
         }
-        //cns->puts("Size: cnt=%d btsize=%d\n", cnt, btsize);
-        plus(&bo, &bp, cnt*btsize);
-      }
-      if(gete(p)==8){
-        uint8_t t=getd(p);
-        //cns->puts("type(guess): %02x\n", t);
-        if(t==2){
-          slots[slot].type=USBRMouse;
-        }else{
-        }
-      }else if(gete(p)==0xa0){
-        cc++;
-      }else{
-      }
+        uip=0;
+        //cns->puts("xmax=%d(off=%d) ymax=%d(off=%d)\n", d->xmax, d->ymax, d->xoff, d->yoff);
+        break;
+    }
     p+=p[0]&3;
     p++;
   }
-  bo+=(bp%8);
-  d->nt->trbtransferlength=bo;
-  if(bo>9){
-    delete d->buf;
-    d->buf=(unsigned char*)searchmem(bo);
-  }
-  if(slots[slot].type==USBRKeyboard){
-    if(d->kasize==0){
-      ports[slots[slot].port].haveerr=1;
-      unsigned char port=slots[slot].port;
-      ports[port].phase=waitreset;
-      slots[slot].phase=waitreset;
-      resetport(port);
-    }
-  }
-  //cns->puts("Total report length:%d (bo=%d bp=%d)\n", bo, bo-1, bp);
 }
 };
 using namespace hidd;
@@ -182,7 +200,7 @@ void hid::init(unsigned char s){
   do {
     if(p[0]==0)break;   
     if(p[1]==4){
-      slots[slot].intn=p[2];
+      //slots[slot].intn=p[2];
       //cns->puts("protocol=%d\n", p[7]);
     }
     if(p[1]==5){
@@ -198,45 +216,108 @@ void hid::init(unsigned char s){
     p+=p[0];
   }while(p[1]!=4);
   //cns->puts("intn=%d indci=%d isr=%d\n", slots[slot].intn, intin, isr);
-  if(isr)controltrans(slot, 0b10000001, 6, 0x2200, slots[slot].intn, reportlength, searchmem(reportlength), 1);
-  else
-    controltrans(slot, 0b00100001, 11, 0, slots[slot].intn, 0, 0, 0);
+  //led=searchmem(1);
+  if(isr){
+    off=1; //マウスじゃなかったときのため（off=0だと/xmaxでエラー泊）
+    initphase=0;
+    initialized=1;
+    //cns->puts("getting report descirptor...\n");
+      controltrans(slot, 0b10000001, 6, 0x2200, in, reportlength,   searchmem(reportlength), 1);
+  }else{
+    initphase=1234;
+    initialized=1;
+    off=1;
+    isr=1;
+    controltrans(slot, 0b00100001, 11, 1, in, 0, 0, 0);
+  }
+  firstt=true;
   initialized=1;
+  test=(unsigned char*)searchmem(1);
 }       
 void hid::comp(struct transfertrb* t){
   using namespace xhci;
+  a:
   if(isr&&t->code!=4){
-    if(initphase==0){
-    off=1; //マウスじゃなかったときのため（off=0だと/xmaxでエラー泊）
-      decoderd(this, (unsigned char*)*(unsigned long long*)*(unsigned long long*)t, reportlength-t->trbtransferlength);
-      if(slots[slot].type==USBRKeyboard&&kasize==0)return;
+    if(initphase==1234){
+        struct TRB* ttt=(struct TRB*)*(unsigned long long*)t;
+        //cns->puts("protocol at %0llx\n", ttt->type);
+      //cns->puts("ep state: %d at %d\n", dcbaa[slot]->epcont[0].epstate, slots[slot].intn);
+      initphase=0;
+      for(int i=0;i<50000;i++);
+      controltrans(slot, 0b10000001, 6, 0x2200, in, reportlength,   searchmem(reportlength), 1);
+      //controltrans(slot, 0b10100001, 3, 0, slots[slot].intn, 1, searchmem(1), 1);
+    }else if(initphase==1233){
+      if(t->code!=6){
+        struct dataTRB* ttt=(struct dataTRB*)*(unsigned long long*)t;
+        //cns->puts("protocol at %0llx\n", *(unsigned char*)ttt->pointer);
+        controltrans(slot, 0b00100001, 11, 1, in, 0, 0, 0);
+      }else{
       initphase=1;
       //controltrans(slot, 0b00100001, 11, 1, slots[slot].intn, 0, 0, 0);
       tr[slot][intin]->push((struct TRB*)nt);
       db[slot]=intin;
+      }
+      //controltrans(slot, 0b10000001, 6, 0x2200, slots[slot].intn, reportlength,   searchmem(reportlength), 1);
+      initphase=0;
+    }else if(initphase==0){
+      //cns->puts("length: %0d\n", reportlength-t->trbtransferlength);
+      decoderd(this, (unsigned char*)*(unsigned long long*)*(unsigned long long*)t, reportlength-t->trbtransferlength);
+      //if(slots[slot].type==USBRKeyboard&&kasize==0)return;
+      initphase=1;
+      //controltrans(slot, 0b00100001, 11, 1, slots[slot].intn, 0, 0, 0);
+      sendingnt=true;
+      tr[slot][intin]->push((struct TRB*)nt);
+      db[slot]=intin;
     }else{
-      if(!off){
-        int nmx=getdfornt(&buf[xoff], xsize)*scrxsize/xmax;
-        int nmy=getdfornt(&buf[yoff], ysize)*scrysize/ymax;
-        int px=nmx-mx;
-        int py=nmy-my;
-        //asm("cli");
-        kernelbuf->write(0);
-        kernelbuf->write(getdfornt(&buf[boff], bsize));
-        kernelbuf->write((signed int)px);
-        kernelbuf->write((signed int)py);
-        //asm("sti");
-      }else{
-        //asm("cli");
-        kernelbuf->write(0);
-        kernelbuf->write(getdfornt(&buf[boff], 8));
-        kernelbuf->write((signed char)getdfornt(&buf[xoff], xsize));
-        kernelbuf->write((signed char)getdfornt(&buf[yoff], ysize));
-        //asm("sti");
+      //if(((struct TRB*)t->pointer)->type==1){
+        //sendingnt=true;
+     // }
+      if(xmax&&ymax){
+        int nmx=getd(buf, xoff, xsize);
+        int nmy=getd(buf, yoff, ysize);
+        if(!off){
+          //if((!xmax)||(!ymax))asm("cli\nhlt");
+          //asm("cli\nhlt");
+          nmx=nmx*scrxsize/xmax;
+          nmy=nmy*scrysize/ymax;
+          int px=nmx-mx;
+          int py=nmy-my;
+          //asm("cli");
+          kernelbuf->write(0);
+          kernelbuf->write(getd(buf, boff, bsize));
+          kernelbuf->write((signed int)px);
+          kernelbuf->write((signed int)py);
+          //asm("sti");
+        }else{
+          //cns->puts("strange data recieved code=%d length=%d(NT: %d)\n", t->code,   t->trbtransferlength, nt->trbtransferlength);
+          kernelbuf->write(0);
+          kernelbuf->write(getd(buf, boff, bsize));
+          kernelbuf->write((signed long long)nmx);
+          kernelbuf->write((signed long long)nmy);
+        }
+      }
+      if(kasize){
+        *(unsigned long long*)kernel=getd(buf, atkoff, atksize);
+        unsigned long long nkey=getd(buf, kaoff, kasize);
+        *(unsigned long long*)kernel|=nkey<<16;
+          //cns->puts("data: %0llx %016llx\n", *(unsigned long long*)kernel, *(unsigned long long*)buf);
+        if((!firstt)||(*(unsigned long long*)kernel)){
+          kernelbuf->write(5);
+          kernelbuf->write(kasize/8);
+          for(unsigned int i=0;i<kasize/8;i++)
+            kernelbuf->write(getd(buf, kaoff+i*8, 8));
+          firstt=false;
+        }
+        //*(unsigned char*)led^=1;
+        //controltrans(slot, 0b00100001, 9, 0x0202, in, 1, led, 0);
+      }
+      if(((struct TRB*)t->pointer)->type==1){
+        tr[slot][intin]->push((struct TRB*)nt);
+        db[slot]=intin;
       }
     }
-    tr[slot][intin]->push((struct TRB*)nt);
-    db[slot]=intin;
+  }else if(t->code==4){
+    cns->puts("Transaction hid error! on slot=%d\n", slot);
   }
   if(!isr){
     if(id.binterfaceprotocol==2){
@@ -249,12 +330,33 @@ void hid::comp(struct transfertrb* t){
       tr[slot][intin]->push((struct TRB*)nt);
       db[slot]=intin;
     }else if(id.binterfaceprotocol==1){
-      //asm("cli");
-      kernelbuf->write(5);
-      kernelbuf->write((unsigned long long)buf);
-      //asm("sti");
-      tr[slot][intin]->push((struct TRB*)nt);
-      db[slot]=intin;
+      if(initphase==2){
+        if(((struct TRB*)*(unsigned long long*)t)->type!=1){
+          cns->puts("result: %d\n", t->code);
+        }else{
+          sendingnt=false;
+          //asm("cli");
+          kernelbuf->write(5);
+          kernelbuf->write((unsigned long long)buf);
+          //asm("sti");
+        //cns->puts("setting LED epstate=%d\n", dcbaa[slot]->epcont[0].epstate);
+          test[0]+=1;
+        /*if(dcbaa[slot]->epcont[0].epstate!=1)cns->puts("EP Error detected!(state=%d)\n", dcbaa[slot]->epcont[0].epstate);
+        controltrans(slot, 0b00100001, 9, 0x0200, slots[slot].intn, 1, (unsigned long long)test, 0);
+        }*/
+          if(!sendingnt){
+            sendingnt=true;
+            tr[slot][intin]->push((struct TRB*)nt);
+            db[slot]=intin;
+          }
+        }
+      }else if(initphase==0){
+        initphase=2;
+        tr[slot][intin]->push((struct TRB*)nt);
+        db[slot]=intin;
+      }else{
+        initphase=2;
+      }
     }
   }
 }
